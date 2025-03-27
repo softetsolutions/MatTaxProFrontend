@@ -73,7 +73,7 @@ function Navbar() {
           <div className="flex justify-between items-center mb-8">
             <a href="/" className="flex items-center gap-2">
               <Receipt className="w-6 h-6 text-yellow-400" />
-              <span className="font-bold text-xl">MatTax</span>
+              <span className="font-bold text-xl">MatTaxPro</span>
             </a>
             <button
               onClick={toggleMenu}
