@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { Eye, EyeOff, ArrowLeft} from "lucide-react";
 import Header from "../components/Header";
 import PhoneInput from "react-phone-input-2";
@@ -18,6 +19,8 @@ export default function UserSignupPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
+  const {role} = useParams();
+
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -53,7 +56,9 @@ export default function UserSignupPage() {
   // validation 
   const validateForm = () => {
     const newErrors = {};
-    if (!formData.fullName.trim()) newErrors.firstName = "name is required";
+    if (!formData.fullName.trim()) {
+      newErrors.firstName = "name is required";
+    }
 
     if (!formData.email.trim()) {
       newErrors.email = "Email is required";
@@ -78,16 +83,28 @@ export default function UserSignupPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!validateForm()) return;
+    console.log("handleSubmit is running",import.meta.env.VITE_BASE_URL)
+
+    // if (!validateForm()) return;
 
     setIsLoading(true);
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-      console.log("User signup:", formData);
-
-      // Redirect to success page or dashboard
-      navigate("/signup/success");
+      const user = await fetch(`${import.meta.env.VITE_BASE_URL}/users`, {  // Change the URL based on your API route
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            fname: formData.fullName.split(" ")[0],
+            lname: formData.fullName.split(" ")[1],
+            email: formData.email,
+            password: formData.password,
+            role: role,
+        })
+    })
+    toast.success("Wohha signed up successfully!");
+      navigate("/dashboard");
     } catch {
       setErrors({ form: "An error occurred. Please try again." });
     } finally {
@@ -143,6 +160,7 @@ export default function UserSignupPage() {
                     onChange={handleChange}
                     className="w-full p-3 bg-zinc-800 border border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400"
                     placeholder="Full Name"
+                    required
                   />
                   {errors.fullName && (
                     <p className="mt-1 text-xs text-red-400">
@@ -213,6 +231,7 @@ export default function UserSignupPage() {
                       onChange={handleChange}
                       className="w-full p-3 bg-zinc-800 border border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400 pr-10"
                       placeholder="••••••••"
+                      required
                     />
                     <button
                       type="button"
@@ -241,6 +260,7 @@ export default function UserSignupPage() {
                       onChange={handleChange}
                       className="w-full p-3 bg-zinc-800 border border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400 pr-10"
                       placeholder="••••••••"
+                      required
                     />
                     <button
                       type="button"

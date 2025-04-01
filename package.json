@@ -17,6 +17,7 @@
     "react-dropzone": "^14.3.8",
     "react-phone-input-2": "^2.15.1",
     "react-router-dom": "^7.4.0",
+    "react-toastify": "^11.0.5",
     "tailwindcss": "^4.0.15"
   },
   "devDependencies": {

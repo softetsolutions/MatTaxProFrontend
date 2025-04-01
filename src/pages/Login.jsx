@@ -2,11 +2,28 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
 import Header from "../components/Header";
+import { toast } from "react-toastify";
 
 const spinner = (
-  <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+  <svg
+    className="animate-spin h-5 w-5 text-white"
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+  >
+    <circle
+      className="opacity-25"
+      cx="12"
+      cy="12"
+      r="10"
+      stroke="currentColor"
+      strokeWidth="4"
+    ></circle>
+    <path
+      className="opacity-75"
+      fill="currentColor"
+      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+    ></path>
   </svg>
 );
 
@@ -32,7 +49,7 @@ const socialProviders = [
           fill="#EA4335"
         />
       </svg>
-    )
+    ),
   },
   {
     name: "facebook",
@@ -40,16 +57,16 @@ const socialProviders = [
       <svg className="w-5 h-5" viewBox="0 0 24 24" fill="#1877F2">
         <path d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z" />
       </svg>
-    )
+    ),
   },
   {
     name: "x",
     icon: (
       <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-        <path d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z"/>
+        <path d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z" />
       </svg>
-    )
-  }
+    ),
+  },
 ];
 
 export default function LoginPage() {
@@ -63,7 +80,7 @@ export default function LoginPage() {
   const [socialLoginLoading, setSocialLoginLoading] = useState({
     google: false,
     facebook: false,
-    x: false
+    x: false,
   });
 
   const togglePasswordVisibility = () => setShowPassword((prev) => !prev);
@@ -75,11 +92,27 @@ export default function LoginPage() {
 
     try {
       // Simulate authentication
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      console.log("Login attempt:", { email, password, rememberMe });
+      let user = await fetch(
+        `${import.meta.env.VITE_BASE_URL}/user/jwt/createSession`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            email: email,
+            password: password,
+          }),
+        }
+      );
+
+      user = await user.json();
+      localStorage.setItem("userToken", user.authToken);
+      toast.success("Wohha logged in successfully!");
       navigate("/dashboard");
-    } catch {
+    } catch (e) {
       setError("Invalid email or password. Please try again.");
+      console.error(e);
     } finally {
       setIsLoading(false);
     }
@@ -123,7 +156,10 @@ export default function LoginPage() {
               <form onSubmit={handleSubmit} className="space-y-5">
                 {/* Email*/}
                 <div>
-                  <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-1">
+                  <label
+                    htmlFor="email"
+                    className="block text-sm font-medium text-gray-300 mb-1"
+                  >
                     Email Address
                   </label>
                   <input
@@ -140,10 +176,16 @@ export default function LoginPage() {
                 {/* Password */}
                 <div>
                   <div className="flex justify-between items-center mb-1">
-                    <label htmlFor="password" className="text-sm font-medium text-gray-300">
+                    <label
+                      htmlFor="password"
+                      className="text-sm font-medium text-gray-300"
+                    >
                       Password
                     </label>
-                    <a href="/forgot-password" className="text-xs text-yellow-400 hover:underline">
+                    <a
+                      href="/forgot-password"
+                      className="text-xs text-yellow-400 hover:underline"
+                    >
                       Forgot Password?
                     </a>
                   </div>
@@ -176,7 +218,10 @@ export default function LoginPage() {
                     onChange={(e) => setRememberMe(e.target.checked)}
                     className="w-4 h-4 accent-yellow-500 rounded focus:ring-yellow-500"
                   />
-                  <label htmlFor="remember" className="ml-2 text-sm text-gray-300">
+                  <label
+                    htmlFor="remember"
+                    className="ml-2 text-sm text-gray-300"
+                  >
                     Remember me
                   </label>
                 </div>
@@ -193,9 +238,25 @@ export default function LoginPage() {
                 >
                   {isLoading ? (
                     <span className="flex items-center justify-center">
-                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-black" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      <svg
+                        className="animate-spin -ml-1 mr-2 h-4 w-4 text-black"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        ></circle>
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        ></path>
                       </svg>
                       Signing in...
                     </span>
@@ -212,7 +273,9 @@ export default function LoginPage() {
                     <div className="w-full border-t border-zinc-700"></div>
                   </div>
                   <div className="relative flex justify-center text-sm">
-                    <span className="px-2 bg-zinc-900 text-gray-400">Or continue with</span>
+                    <span className="px-2 bg-zinc-900 text-gray-400">
+                      Or continue with
+                    </span>
                   </div>
                 </div>
 
