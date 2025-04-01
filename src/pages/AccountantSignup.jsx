@@ -2,6 +2,8 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Eye, EyeOff, ArrowLeft} from "lucide-react";
 import Header from "../components/Header";
+import PhoneInput from "react-phone-input-2";
+import "react-phone-input-2/lib/style.css";
 
 export default function UserSignupPage() {
   const navigate = useNavigate();
@@ -31,6 +33,22 @@ export default function UserSignupPage() {
       });
     }
   };
+
+  const handlePhoneChange = (value) => {
+    setFormData((prev) => ({
+      ...prev,
+      phone: value,
+    }))
+
+    if (errors.phone) {
+      setErrors((prev) => {
+        const newErrors = { ...prev }
+        delete newErrors.phone
+        return newErrors
+      })
+    }
+  };
+
 
   const validateForm = () => {
     const newErrors = {};
@@ -152,6 +170,31 @@ export default function UserSignupPage() {
                     <p className="mt-1 text-xs text-red-400">{errors.email}</p>
                   )}
                 </div>
+                  {/* Phone Number */}
+                  <div>
+                  <label htmlFor="phone" className="block text-sm font-medium mb-1.5 text-gray-300">
+                    Phone Number
+                  </label>
+                  <div className="phone-input-container">
+                    <PhoneInput
+                      country={"us"}
+                      value={formData.phone}
+                      onChange={handlePhoneChange}
+                      inputProps={{
+                        name: "phone",
+                        id: "phone",
+                        required: true,
+                        className: "w-full p-3 bg-zinc-800 text-white",
+                      }}
+                      containerClass="phone-input"
+                      buttonClass="phone-dropdown-button"
+                      dropdownClass="phone-dropdown"
+                      inputStyle={{paddingLeft:"50px"}}
+                    />
+                  </div>
+                  {errors.phone && <p className="mt-1 text-xs text-red-400">{errors.phone}</p>}
+                </div>
+
 
                 {/* Password */}
                 <div>

@@ -4,6 +4,7 @@
         export default function DashboardLayout() {
           const navigation = [
             { name: "Transactions", icon: History, href: "transactions" },
+            {name: "Transaction Log", icon: History, href: "transactionlog"},
             { name: "Quick Actions", icon: Zap, href: "quick-actions" },
             { name: "Export", icon: Download, href: "export" },
             { name: "Settings", icon: Settings, href: "settings" },
