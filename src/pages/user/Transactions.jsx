@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ArrowUpDown, Edit, Trash2 } from "lucide-react";
+import axios from "axios";
 
 export default function TransactionsPage() {
   const [sortField, setSortField] = useState("date");
@@ -10,161 +11,215 @@ export default function TransactionsPage() {
     amount: "",
     category: "",
     type: "debit",
+    vendorId: "",
   });
-  const [transactions, setTransactions] = useState([
-    {
-      id: 1,
-      amount: "$125.00",
-      date: "2023-03-15",
-      merchant: "Amazon",
-      category: "Shopping",
-      createdBy: "User1",
-      account: "Checking",
-      reports: "View",
-      receipt: "Download",
-    },
-    {
-      id: 2,
-      amount: "$89.99",
-      date: "2023-03-14",
-      merchant: "Netflix",
-      category: "Entertainment",
-      createdBy: "User2",
-      account: "Savings",
-      reports: "View",
-      receipt: "Download",
-    },
-    {
-      id: 3,
-      amount: "$245.50",
-      date: "2023-03-13",
-      merchant: "Whole Foods",
-      category: "Groceries",
-      createdBy: "User1",
-      account: "Credit",
-      reports: "View",
-      receipt: "Download",
-    },
-  ]);
+  const [transactions, setTransactions] = useState([]);
   const [files, setFiles] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchTransactions = async () => {
+      try {
+        const response = await axios.get(
+          "http://localhost:5005/transaction/25"
+        );
+        console.log("API Response:", response.data);
+        setTransactions(response.data);
+        setError(null);
+      } catch (err) {
+        setError("Failed to fetch transactions. Please try again later.");
+        console.error("API Error:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchTransactions();
+  }, []);
 
   const handleSort = (field) => {
     if (sortField === field) {
-      setSortDirection(sortDirection === "asc" ? "desc" : "asc")
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
     } else {
-      setSortField(field)
-      setSortDirection("asc")
+      setSortField(field);
+      setSortDirection("asc");
     }
   };
 
   const handleInputChange = (e) => {
-    const { name, value } = e.target
+    const { name, value } = e.target;
     setFormData({
       ...formData,
       [name]: value,
-    })
+    });
   };
 
   const handleFileChange = (e) => {
     if (e.target.files.length > 0) {
-      setFiles(Array.from(e.target.files))
+      setFiles(Array.from(e.target.files));
     }
   };
 
   const handleFileDrop = (e) => {
-    e.preventDefault()
+    e.preventDefault();
     if (e.dataTransfer.files.length > 0) {
-      setFiles(Array.from(e.dataTransfer.files))
+      setFiles(Array.from(e.dataTransfer.files));
     }
   };
 
   const handleDragOver = (e) => {
-    e.preventDefault()
-  }
+    e.preventDefault();
+  };
 
-  const handleSubmit = (e) => {
-    if (e) e.preventDefault()
+  const handleSubmit = async (e) => {
+    if (e) e.preventDefault();
 
-    if (editingId) {
-      // Update existing transaction
-      setTransactions(
-        transactions.map((txn) =>
-          txn.id === editingId
-            ? {
-                ...txn,
-                amount: `$${Number.parseFloat(formData.amount).toFixed(2)}`,
-                category: formData.category,
-                merchant: formData.type === "debit" ? "Payment" : "Deposit",
-              }
-            : txn,
-        ),
-      )
-    } else {
-      // Create new transaction
-      const newTransaction = {
-        id: transactions.length > 0 ? Math.max(...transactions.map((t) => t.id)) + 1 : 1,
-        amount: `$${Number.parseFloat(formData.amount).toFixed(2)}`,
-        date: new Date().toISOString().split("T")[0],
-        merchant: formData.type === "debit" ? "Payment" : "Deposit",
-        category: formData.category,
-        createdBy: "Current User",
-        account: "Primary",
-        reports: "View",
-        receipt: files.length > 0 ? "Download" : "N/A",
+    try {
+      if (editingId) {
+        // Update existing transaction
+        const existingTransaction = transactions.find(
+          (txn) => txn.id === editingId
+        );
+        const transactionData = {
+          amount: parseFloat(formData.amount),
+          category: formData.category,
+          type: formData.type,
+          vendorId: formData.vendorId,
+          userId: existingTransaction.userId,
+          isDeleted: existingTransaction.isDeleted,
+        };
+
+        const response = await axios.post(
+          `http://localhost:5005/transaction/update`,
+          transactionData
+        );
+
+        // Fix here: Ensure amount is treated as a number
+        const updatedAmount = Number(response.data.amount);
+
+        setTransactions(
+          transactions.map((txn) =>
+            txn.id === editingId
+              ? {
+                  ...response.data,
+                  amount: `$${
+                    isNaN(updatedAmount) ? "0.00" : updatedAmount.toFixed(2)
+                  }`,
+                }
+              : txn
+          )
+        );
+      } else {
+        // Create new transaction
+        const transactionData = {
+          amount: parseFloat(formData.amount),
+          category: formData.category,
+          type: formData.type,
+          vendorId: 2,
+          userId: 25, // Hardcoded user ID from fetch URL
+          isdeleted: false,
+        };
+
+        const response = await axios.post(
+          "http://localhost:5005/transaction",
+          transactionData
+        );
+
+        // Fix here: Ensure amount is treated as a number
+        const newAmount = Number(response.data.amount);
+
+        setTransactions([
+          ...transactions,
+          {
+            ...response.data,
+            amount: `$${isNaN(newAmount) ? "0.00" : newAmount.toFixed(2)}`,
+            date: new Date().toISOString().split("T")[0],
+          },
+        ]);
       }
-      setTransactions([...transactions, newTransaction])
+
+      setFormData({ amount: "", category: "", type: "debit", vendorId: "" });
+      setFiles([]);
+      setShowModal(false);
+      setEditingId(null);
+    } catch (err) {
+      console.error("Operation failed:", err);
+      alert("Operation failed. Please try again.");
     }
-    setFormData({ amount: "", category: "", type: "debit" })
-    setFiles([])
-    setShowModal(false)
-    setEditingId(null)
   };
 
   const handleEdit = (id) => {
-    const transactionToEdit = transactions.find((txn) => txn.id === id)
+    const transactionToEdit = transactions.find((txn) => txn.id === id);
     if (transactionToEdit) {
       setFormData({
         amount: transactionToEdit.amount.replace("$", ""),
         category: transactionToEdit.category,
-        type: transactionToEdit.merchant === "Deposit" ? "credit" : "debit",
-      })
-      setEditingId(id)
-      setShowModal(true)
+        type: transactionToEdit.type,
+        vendorId: transactionToEdit.vendorId,
+      });
+      setEditingId(id);
+      setShowModal(true);
     }
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (window.confirm("Are you sure you want to delete this transaction?")) {
-      setTransactions(transactions.filter((txn) => txn.id !== id))
+      try {
+        await axios.delete(`http://localhost:5005/transaction/${id}`);
+        setTransactions(transactions.filter((txn) => txn.id !== id));
+      } catch (err) {
+        console.error("Delete failed:", err);
+        alert("Delete failed. Please try again.");
+      }
     }
-  }
+  };
 
   const sortedTransactions = [...transactions].sort((a, b) => {
-    const modifier = sortDirection === "asc" ? 1 : -1
+    const modifier = sortDirection === "asc" ? 1 : -1;
 
-    if (sortField === "date") {
-      return (new Date(a.date) - new Date(b.date)) * modifier
-    }
     if (sortField === "amount") {
-      const amountA = Number.parseFloat(a.amount.replace("$", ""))
-      const amountB = Number.parseFloat(b.amount.replace("$", ""))
-      return (amountA - amountB) * modifier
+      const amountA = Number.parseFloat(a.amount.replace("$", ""));
+      const amountB = Number.parseFloat(b.amount.replace("$", ""));
+      return (amountA - amountB) * modifier;
     }
-    return String(a[sortField]).localeCompare(String(b[sortField])) * modifier
+    return String(a[sortField]).localeCompare(String(b[sortField])) * modifier;
   });
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-6 text-center text-red-500">
+        {error}
+        <button
+          onClick={() => window.location.reload()}
+          className="ml-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Transactions</h1>
-          <p className="text-sm text-gray-500">View and manage your transactions</p>
+          <p className="text-sm text-gray-500">
+            View and manage your transactions
+          </p>
         </div>
         <button
           onClick={() => {
-            setEditingId(null)
-            setShowModal(true)
+            setEditingId(null);
+            setShowModal(true);
           }}
           className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md transition-colors hover:cursor-pointer"
         >
@@ -172,7 +227,6 @@ export default function TransactionsPage() {
         </button>
       </div>
 
-      {/* Transactions Table */}
       <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -180,13 +234,10 @@ export default function TransactionsPage() {
               <tr className="text-left text-sm font-medium text-gray-500 border-b border-gray-200">
                 {[
                   { field: "date", label: "Date" },
-                  { field: "merchant", label: "To/From" },
-                  { field: "category", label: "Category" },
-                  { field: "createdBy", label: "Created By" },
-                  { field: "account", label: "Account" },
-                  { field: "reports", label: "Reports" },
                   { field: "amount", label: "Amount" },
-                  { field: "receipt", label: "Receipt" },
+                  { field: "category", label: "Category" },
+                  { field: "type", label: "Type" },
+                  { field: "vendorId", label: "Vendor ID" },
                   { field: "actions", label: "Actions" },
                 ].map((header) => (
                   <th key={header.field} className="px-4 py-3 hover:bg-gray-50">
@@ -194,9 +245,14 @@ export default function TransactionsPage() {
                       {header.label}
                       {header.field !== "actions" && (
                         <>
-                          <ArrowUpDown className="w-4 h-4 cursor-pointer" onClick={() => handleSort(header.field)} />
+                          <ArrowUpDown
+                            className="w-4 h-4 cursor-pointer"
+                            onClick={() => handleSort(header.field)}
+                          />
                           {sortField === header.field && (
-                            <span className="text-xs">({sortDirection === "asc" ? "↑" : "↓"})</span>
+                            <span className="text-xs">
+                              ({sortDirection === "asc" ? "↑" : "↓"})
+                            </span>
                           )}
                         </>
                       )}
@@ -208,21 +264,35 @@ export default function TransactionsPage() {
             <tbody className="divide-y divide-gray-200">
               {sortedTransactions.length === 0 ? (
                 <tr>
-                  <td colSpan="9" className="px-4 py-6 text-center text-gray-500">
-                    No records to display
+                  <td
+                    colSpan="6"
+                    className="px-4 py-6 text-center text-gray-500"
+                  >
+                    No transactions found
                   </td>
                 </tr>
               ) : (
                 sortedTransactions.map((txn) => (
-                  <tr key={txn.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-4 py-3 text-sm text-gray-900">{txn.date}</td>
-                    <td className="px-4 py-3 text-sm text-gray-900">{txn.merchant}</td>
-                    <td className="px-4 py-3 text-sm text-gray-900">{txn.category}</td>
-                    <td className="px-4 py-3 text-sm text-gray-900">{txn.createdBy}</td>
-                    <td className="px-4 py-3 text-sm text-gray-900">{txn.account}</td>
-                    <td className="px-4 py-3 text-sm text-blue-600 hover:underline cursor-pointer">{txn.reports}</td>
-                    <td className="px-4 py-3 text-sm font-medium text-gray-900">{txn.amount}</td>
-                    <td className="px-4 py-3 text-sm text-blue-600 hover:underline cursor-pointer">{txn.receipt}</td>
+                  <tr
+                    key={txn.id}
+                    className="hover:bg-gray-50 transition-colors"
+                  >
+                    <td className="px-4 py-3 text-sm text-gray-900">
+                      {txn.date}
+                    </td>
+                    <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                      {txn.amount}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-900">
+                      {txn.category}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-900 capitalize">
+                      {txn.type}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-900">
+                      {" "}
+                      {txn.vendorId}
+                    </td>
                     <td className="px-4 py-3 text-sm">
                       <div className="flex gap-2">
                         <button
@@ -249,7 +319,6 @@ export default function TransactionsPage() {
         </div>
       </div>
 
-      {/* Transaction Modal */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="w-full max-w-4xl bg-white p-6 rounded-lg shadow-xl border border-gray-200 transition-all animate-in fade-in zoom-in-95 duration-300">
@@ -259,8 +328,8 @@ export default function TransactionsPage() {
               </h3>
               <button
                 onClick={() => {
-                  setShowModal(false)
-                  setEditingId(null)
+                  setShowModal(false);
+                  setEditingId(null);
                 }}
                 className="text-gray-500 hover:cursor-pointer hover:text-red-500"
               >
@@ -268,12 +337,19 @@ export default function TransactionsPage() {
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="flex flex-col md:flex-row gap-6">
-              {/* Left Column */}
+            <form
+              onSubmit={handleSubmit}
+              className="flex flex-col md:flex-row gap-6"
+            >
               <div className="flex-1">
-                <h4 className="font-medium text-gray-700 mb-3">Transaction Details</h4>
+                <h4 className="font-medium text-gray-700 mb-3">
+                  Transaction Details
+                </h4>
                 <div className="mb-4">
-                  <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="amount">
+                  <label
+                    className="block text-gray-700 text-sm font-bold mb-2"
+                    htmlFor="amount"
+                  >
                     Amount
                   </label>
                   <input
@@ -291,7 +367,10 @@ export default function TransactionsPage() {
                 </div>
 
                 <div className="mb-4">
-                  <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="category">
+                  <label
+                    className="block text-gray-700 text-sm font-bold mb-2"
+                    htmlFor="category"
+                  >
                     Category
                   </label>
                   <select
@@ -314,8 +393,29 @@ export default function TransactionsPage() {
                   </select>
                 </div>
 
+                <div className="mb-4">
+                  <label
+                    className="block text-gray-700 text-sm font-bold mb-2"
+                    htmlFor="vendorId"
+                  >
+                    Vendor ID
+                  </label>
+                  <input
+                    type="text"
+                    id="vendorId"
+                    name="vendorId"
+                    value={formData.vendorId}
+                    onChange={handleInputChange}
+                    className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
+                    placeholder="Enter vendor ID"
+                    required
+                  />
+                </div>
+
                 <div className="mb-6">
-                  <label className="block text-gray-700 text-sm font-bold mb-2">Transaction Type</label>
+                  <label className="block text-gray-700 text-sm font-bold mb-2">
+                    Transaction Type
+                  </label>
                   <div className="flex gap-4">
                     <label className="inline-flex items-center">
                       <input
@@ -343,9 +443,10 @@ export default function TransactionsPage() {
                 </div>
               </div>
 
-              {/* Right Column - File Upload */}
               <div className="flex-1 border-l pl-6">
-                <h4 className="font-medium text-gray-700 mb-3">Upload Receipt</h4>
+                <h4 className="font-medium text-gray-700 mb-3">
+                  Upload Receipt
+                </h4>
                 <div
                   className="border-2 border-dashed border-gray-300 rounded-lg p-6 flex flex-col items-center justify-center h-64 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer"
                   onDragOver={handleDragOver}
@@ -367,7 +468,9 @@ export default function TransactionsPage() {
                   </div>
                   {files.length > 0 ? (
                     <div className="w-full">
-                      <p className="mb-2 text-sm font-medium text-gray-700">Selected Files:</p>
+                      <p className="mb-2 text-sm font-medium text-gray-700">
+                        Selected Files:
+                      </p>
                       <ul className="text-xs text-gray-600 mb-4 max-h-20 overflow-y-auto">
                         {files.map((file, index) => (
                           <li key={index} className="truncate">
@@ -378,15 +481,24 @@ export default function TransactionsPage() {
                     </div>
                   ) : (
                     <>
-                      <p className="mb-2 text-sm font-medium text-gray-700">Drag & Drop files here</p>
+                      <p className="mb-2 text-sm font-medium text-gray-700">
+                        Drag & Drop files here
+                      </p>
                       <p className="text-xs text-gray-500 mb-4">or</p>
                     </>
                   )}
                   <label className="px-4 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors cursor-pointer">
                     Browse Files
-                    <input type="file" className="hidden" onChange={handleFileChange} multiple />
+                    <input
+                      type="file"
+                      className="hidden"
+                      onChange={handleFileChange}
+                      multiple
+                    />
                   </label>
-                  <p className="text-xs text-gray-500 mt-2">Supported formats: JPG, PNG, PDF</p>
+                  <p className="text-xs text-gray-500 mt-2">
+                    Supported formats: JPG, PNG, PDF
+                  </p>
                 </div>
               </div>
             </form>
@@ -395,14 +507,15 @@ export default function TransactionsPage() {
               <button
                 type="button"
                 onClick={() => {
-                  setShowModal(false)
-                  setEditingId(null)
+                  setShowModal(false);
+                  setEditingId(null);
                 }}
-                className="px-4 py-2 text-gray-600 hover:text-gray-800 border-2 bg-red-100 border-red-300 rounded hover:bg-red-200 transition-colors hover:cursor-pointer hover:text-red-600"
+                className="px-4 py-2 text-gray-600 border-2 bg-red-100 border-red-300 rounded hover:bg-red-200 transition-colors hover:cursor-pointer hover:text-red-600"
               >
                 Cancel
               </button>
               <button
+                type="submit"
                 onClick={handleSubmit}
                 className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors hover:cursor-pointer"
               >
