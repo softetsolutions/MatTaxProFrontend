@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { useState, useEffect } from "react";
-import { ArrowUpDown, User, Clock, FileText } from "lucide-react";
+import { ArrowUpDown,ArrowRight, User, Clock, FileText } from "lucide-react";
 
 export default function TransactionLog() {
   const [transactionLogs, setTransactionLogs] = useState([]);
