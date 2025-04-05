@@ -2,3 +2,57 @@
 body {
   @apply bg-black text-white;
 }
+
+/* Custom styles for react-phone-input-2 in dark mode */
+.phone-input-container {
+  @apply relative;
+}
+
+.phone-input {
+  @apply w-full;
+}
+
+.phone-input .form-control {
+  @apply w-full p-3 bg-zinc-800 border border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400 text-white h-auto;
+}
+
+.phone-dropdown-button {
+  @apply bg-zinc-800 border-r border-zinc-700 rounded-l-lg;
+}
+
+.phone-dropdown {
+  @apply bg-zinc-800 text-white border border-zinc-700 rounded-md mt-1 max-h-60 overflow-y-auto;
+}
+
+.phone-dropdown .country {
+  @apply p-2 hover:bg-zinc-700 flex items-center;
+}
+
+.phone-dropdown .country-name {
+  @apply text-black ml-2;
+}
+
+.phone-dropdown .dial-code {
+  @apply text-gray-400 ml-auto;
+}
+
+.phone-dropdown .search {
+  @apply p-2 sticky top-0 bg-zinc-800 border-b border-zinc-700;
+}
+
+.phone-dropdown .search-box {
+  @apply w-full p-2 bg-zinc-700 border border-zinc-600 rounded text-white;
+}
+
+.phone-dropdown .no-entries-message {
+  @apply p-4 text-center text-gray-400;
+}
+
+.phone-dropdown .selected {
+  @apply bg-zinc-700;
+} 
+
+.phone-dropdown .highlight {
+  @apply bg-zinc-700;
+}
+
