@@ -1,10 +1,11 @@
         import { NavLink, Outlet } from "react-router-dom";
-        import { History, Zap, Download, Settings, LogOut } from "lucide-react";
+        import { History, Zap, Download, Settings, LogOut ,User } from "lucide-react";
 
         export default function DashboardLayout() {
           const navigation = [
             { name: "Transactions", icon: History, href: "transactions" },
             {name: "Transaction Log", icon: History, href: "transactionlog"},
+            {name: "Manage Accountant", icon: User, href: "manage-accountant"},
             { name: "Quick Actions", icon: Zap, href: "quick-actions" },
             { name: "Export", icon: Download, href: "export" },
             { name: "Settings", icon: Settings, href: "settings" },
