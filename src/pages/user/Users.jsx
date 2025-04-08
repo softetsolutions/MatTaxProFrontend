@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ArrowUpDown, UserCog, User } from "lucide-react";
+import { ArrowUpDown } from "lucide-react";
 
 export default function Users() {
   const [users, setUsers] = useState([]);
@@ -18,7 +18,6 @@ export default function Users() {
               firstName: "John",
               lastName: "Smith",
               email: "john.smith@example.com",
-              role: "user",
               phone: "+1 (555) 123-4567",
               joinDate: "2023-01-15",
               status: "active",
@@ -28,7 +27,6 @@ export default function Users() {
               firstName: "Emily",
               lastName: "Johnson",
               email: "emily.johnson@accounting.com",
-              role: "accountant",
               phone: "+1 (555) 234-5678",
               joinDate: "2023-02-20",
               status: "active",
@@ -38,7 +36,6 @@ export default function Users() {
               firstName: "Michael",
               lastName: "Brown",
               email: "michael.brown@accounting.com",
-              role: "accountant",
               phone: "+1 (555) 345-6789",
               joinDate: "2023-03-10",
               status: "inactive",
@@ -48,7 +45,6 @@ export default function Users() {
               firstName: "Sarah",
               lastName: "Davis",
               email: "sarah.davis@example.com",
-              role: "user",
               phone: "+1 (555) 456-7890",
               joinDate: "2023-04-05",
               status: "active",
@@ -58,7 +54,6 @@ export default function Users() {
               firstName: "Robert",
               lastName: "Wilson",
               email: "robert.wilson@accounting.com",
-              role: "accountant",
               phone: "+1 (555) 567-8901",
               joinDate: "2023-05-12",
               status: "active",
@@ -68,7 +63,6 @@ export default function Users() {
               firstName: "Jennifer",
               lastName: "Taylor",
               email: "jennifer.taylor@example.com",
-              role: "user",
               phone: "+1 (555) 678-9012",
               joinDate: "2023-06-18",
               status: "active",
@@ -78,7 +72,6 @@ export default function Users() {
               firstName: "David",
               lastName: "Anderson",
               email: "david.anderson@example.com",
-              role: "user",
               phone: "+1 (555) 789-0123",
               joinDate: "2023-07-22",
               status: "inactive",
@@ -88,7 +81,6 @@ export default function Users() {
               firstName: "Lisa",
               lastName: "Martinez",
               email: "lisa.martinez@accounting.com",
-              role: "accountant",
               phone: "+1 (555) 890-1234",
               joinDate: "2023-08-30",
               status: "active",
@@ -126,10 +118,7 @@ export default function Users() {
       sortField === "phone"
     ) {
       return a[sortField].localeCompare(b[sortField]) * modifier;
-    } else if (sortField === "role") {
-      return a.role.localeCompare(b.role) * modifier;
     }
-    return 0;
   });
 
   if (loading) {
@@ -180,7 +169,6 @@ export default function Users() {
                   { field: "firstName", label: "First Name" },
                   { field: "lastName", label: "Last Name" },
                   { field: "email", label: "Email" },
-                  { field: "role", label: "Role" },
                   { field: "phone", label: "Phone Number" },
                 ].map((header) => (
                   <th key={header.field} className="px-4 py-3 hover:bg-gray-50">
@@ -224,23 +212,6 @@ export default function Users() {
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-900">
                       {user.email}
-                    </td>
-                    <td className="px-4 py-3 text-sm">
-                      <div className="flex items-center gap-2">
-                        {user.role === "accountant" ? (
-                          <div className="flex items-center gap-1.5 px-3 py-1 bg-purple-100 text-purple-800 rounded-full">
-                            <UserCog className="w-3.5 h-3.5" />
-                            <span className="font-medium text-xs">
-                              Accountant
-                            </span>
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-1.5 px-3 py-1 bg-blue-100 text-blue-800 rounded-full">
-                            <User className="w-3.5 h-3.5" />
-                            <span className="font-medium text-xs">User</span>
-                          </div>
-                        )}
-                      </div>
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-900">
                       {user.phone}

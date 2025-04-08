@@ -5,8 +5,8 @@ export default function DashboardLayout() {
   const navigation = [
     { name: "Transactions", icon: History, href: "transactions" },
     { name: "Transaction Log", icon: History, href: "transactionlog" },
-    { name: "Manage Accountant", icon: User, href: "manage-accountant" },
-    { name: "users", icon: User, href: "users" },
+    { name: "Add Accountant", icon: User, href: "manage-accountant" },
+    { name: "Users", icon: User, href: "users" },
     { name: "Bin", icon: Trash2, href: "bin" },
   ];
 
@@ -34,11 +34,11 @@ export default function DashboardLayout() {
                   const isBin = item.name === "Bin";
 
                   const activeClass = isBin
-                    ? "bg-red-300 text-white font-medium border-l-4 border-red-500"
+                    ? "text-red-600 hover:bg-gray-50 border-l-4 border-blue-500 bg-gray-100"
                     : "bg-gray-100 text-black font-medium border-l-4 border-blue-500";
 
                   const inactiveClass = isBin
-                    ? "bg-red-500 text-white hover:bg-red-600"
+                    ? "text-red-600 hover:bg-gray-50"
                     : "text-gray-700 hover:bg-gray-50";
 
                   return `${baseClasses} ${
@@ -49,7 +49,7 @@ export default function DashboardLayout() {
                 <item.icon
                   className={`mr-3 h-5 w-5 ${
                     item.name === "Bin"
-                      ? "text-white group-hover:text-white"
+                      ? "text-current group-hover:text-current"
                       : "text-gray-500 group-hover:text-blue-500"
                   }`}
                 />
