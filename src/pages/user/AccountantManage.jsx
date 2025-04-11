@@ -1,65 +1,48 @@
 import { useState, useEffect } from "react"
 import { ArrowUpDown, UserCheck, Info } from "lucide-react"
+import { toast } from 'react-toastify';
+import { jwtDecode } from "jwt-decode";
 
 export default function AccountantPage() {
   const [accountants, setAccountants] = useState([]);
-  const [sortField, setSortField] = useState("accountantId");
+  const [sortField, setSortField] = useState("id");
   const [sortDirection, setSortDirection] = useState("asc");
   const [showModal, setShowModal] = useState(false);
   const [selectedAccountant, setSelectedAccountant] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error] = useState(null);
 
   useEffect(() => {
     const fetchAccountants = async () => {
       try {
-        setTimeout(() => {
-          setAccountants([
-            {
-              id: 1,
-              accountantId: "ACC001",
-              name: "John Smith",
-              email: "john.smith@accounting.com",
-              isAuthorized: false,
-              phone: "+1 (555) 123-4567",
-            },
-            {
-              id: 2,
-              accountantId: "ACC002",
-              name: "Emily Johnson",
-              email: "emily.johnson@accounting.com",
-              isAuthorized: true,
-              phone: "+1 (555) 234-5678",
-            },
-            {
-              id: 3,
-              accountantId: "ACC003",
-              name: "Michael Brown",
-              email: "michael.brown@accounting.com",
-              isAuthorized: false,
-              phone: "+1 (555) 345-6789",
-            },
-            {
-              id: 4,
-              accountantId: "ACC004",
-              name: "Sarah Davis",
-              email: "sarah.davis@accounting.com",
-              isAuthorized: false,
-              phone: "+1 (555) 456-7890",
-            },
-            {
-              id: 5,
-              accountantId: "ACC005",
-              name: "Robert Wilson",
-              email: "robert.wilson@accounting.com",
-              isAuthorized: true,
-              phone: "+1 (555) 567-8901",
-            },
-          ]);
-          setLoading(false);
-        }, 1000);
+        const token = localStorage.getItem("userToken");
+
+        const response = await fetch(`${import.meta.env.VITE_BASE_URL}/user/accountants`, {
+          method: 'GET',
+          headers: {
+            'Authorization': token,
+            'Content-Type': 'application/json'
+          },
+          credentials: 'include'
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to fetch accountants');
+        }
+
+        const data = await response.json();
+        
+        const transformedData = data.map(accountant => ({
+          id: accountant.id,
+          accountantId: `ACC${String(accountant.id).padStart(3, '0')}`,
+          name: `${accountant.fname} ${accountant.lname}`,
+          isAuthorized: false, 
+        }));
+
+        setAccountants(transformedData);
+        setLoading(false);
       } catch (err) {
-        setError("Failed to fetch accountants. Please try again later.");
         console.error("API Error:", err);
         setLoading(false);
       }
@@ -77,23 +60,54 @@ export default function AccountantPage() {
     }
   };
 
-  const handleAuthorize = async (id) => {
+  const handleAuthorize = async (accountantId) => {
     try {
+      const token = localStorage.getItem("userToken");
+      const decoded = jwtDecode(token);
+      const userId = decoded.id;
+
+      const accountant = accountants.find(acc => acc.id === accountantId);
+      const isCurrentlyAuthorized = accountant.isAuthorized;
+
+      const response = await fetch(`${import.meta.env.VITE_BASE_URL}/accountant/${isCurrentlyAuthorized ? 'remove-auth' : 'auth'}`, {
+        method: isCurrentlyAuthorized ? 'DELETE' : 'POST',
+        headers: {
+          'Authorization': token,
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          userId: userId,
+          accountId: accountantId
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || `Failed to ${isCurrentlyAuthorized ? 'remove' : 'add'} authorization`);
+      }
+
+      // Update the local state
       setAccountants(
         accountants.map((accountant) =>
-          accountant.id === id ? { ...accountant, isAuthorized: !accountant.isAuthorized } : accountant
+          accountant.id === accountantId ? { ...accountant, isAuthorized: !isCurrentlyAuthorized } : accountant
         )
-      );
-
-      if (selectedAccountant && selectedAccountant.id === id) {
+      );  
+      if (selectedAccountant && selectedAccountant.id === accountantId) {
         setSelectedAccountant({
           ...selectedAccountant,
-          isAuthorized: !selectedAccountant.isAuthorized,
+          isAuthorized: !isCurrentlyAuthorized,
         });
       }
+
+      toast.success(isCurrentlyAuthorized ? 
+        "Successfully removed authorization" : 
+        "Successfully authorized accountant"
+      );
     } catch (err) {
       console.error("Authorization failed:", err);
-      alert("Authorization failed. Please try again.");
+      toast.error(err.message || "Failed to update authorization. Please try again.");
     }
   };
 
@@ -157,7 +171,6 @@ export default function AccountantPage() {
                 {[
                   { field: "accountantId", label: "Accountant ID" },
                   { field: "name", label: "Name" },
-                  { field: "email", label: "Email" },
                   { field: "status", label: "Status" },
                   { field: "actions", label: "Actions" },
                 ].map((header) => (
@@ -189,7 +202,6 @@ export default function AccountantPage() {
                   <tr key={accountant.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-4 py-3 text-sm text-gray-900">{accountant.accountantId}</td>
                     <td className="px-4 py-3 text-sm text-gray-900">{accountant.name}</td>
-                    <td className="px-4 py-3 text-sm text-gray-900">{accountant.email}</td>
                     <td className="px-4 py-3 text-sm">
                       <span
                         className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
@@ -248,16 +260,6 @@ export default function AccountantPage() {
               <div className="border-b pb-2">
                 <p className=" text-gray-500">Name</p>
                 <p className="font-medium text-black/60">{selectedAccountant.name}</p>
-              </div>
-
-              <div className="border-b pb-2">
-                <p className=" text-gray-500">Email</p>
-                <p className="font-medium text-black/60">{selectedAccountant.email}</p>
-              </div>
-
-              <div className="border-b pb-2">
-                <p className=" text-gray-500">Phone</p>
-                <p className="font-medium text-black/60">{selectedAccountant.phone}</p>
               </div>
 
               <div className="border-b pb-2">
