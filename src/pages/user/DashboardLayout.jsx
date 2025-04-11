@@ -1,14 +1,13 @@
 import { NavLink, Outlet } from "react-router-dom";
+import { jwtDecode } from "jwt-decode";
 import { History, LogOut, User, Trash2 } from "lucide-react";
+import { routeMapping, iconMapping } from "../../utils/constant";
 
 export default function DashboardLayout() {
-  const navigation = [
-    { name: "Transactions", icon: History, href: "transactions" },
-    { name: "Transaction Log", icon: History, href: "transactionlog" },
-    { name: "Add Accountant", icon: User, href: "manage-accountant" },
-    { name: "Users", icon: User, href: "users" },
-    { name: "Bin", icon: Trash2, href: "bin" },
-  ];
+
+  const navigation = jwtDecode(localStorage.getItem("userToken")).allowedRoutes.filter((item)=> Object.keys(routeMapping).includes(item));
+
+  console.log("navigation",navigation)
 
   return (
     <div className="flex min-h-screen bg-white">
@@ -23,39 +22,43 @@ export default function DashboardLayout() {
 
           {/* Navigation */}
           <nav className="flex-1 px-2 space-y-1 mt-6">
-            {navigation.map((item) => (
-              <NavLink
-                key={item.href}
-                to={item.href}
-                end
-                className={({ isActive }) => {
-                  const baseClasses =
-                    "group flex items-center px-4 py-3 text-sm rounded-lg transition-colors";
-                  const isBin = item.name === "Bin";
+            {navigation.map((item) => {
+              const Icon = iconMapping(item);
 
-                  const activeClass = isBin
-                    ? "text-red-600 hover:bg-gray-50 border-l-4 border-blue-500 bg-gray-100"
-                    : "bg-gray-100 text-black font-medium border-l-4 border-blue-500";
+              return (
+                <NavLink
+                  key={item}
+                  to={item}
+                  end
+                  className={({ isActive }) => {
+                    const baseClasses =
+                      "group flex items-center px-4 py-3 text-sm rounded-lg transition-colors";
+                    const isBin = item === "bin";
 
-                  const inactiveClass = isBin
-                    ? "text-red-600 hover:bg-gray-50"
-                    : "text-gray-700 hover:bg-gray-50";
+                    const activeClass = isBin
+                      ? "text-red-600 hover:bg-gray-50 border-l-4 border-blue-500 bg-gray-100"
+                      : "bg-gray-100 text-black font-medium border-l-4 border-blue-500";
 
-                  return `${baseClasses} ${
-                    isActive ? activeClass : inactiveClass
-                  }`;
-                }}
-              >
-                <item.icon
-                  className={`mr-3 h-5 w-5 ${
-                    item.name === "Bin"
-                      ? "text-current group-hover:text-current"
-                      : "text-gray-500 group-hover:text-blue-500"
-                  }`}
-                />
-                {item.name}
-              </NavLink>
-            ))}
+                    const inactiveClass = isBin
+                      ? "text-red-600 hover:bg-gray-50"
+                      : "text-gray-700 hover:bg-gray-50";
+
+                    return `${baseClasses} ${
+                      isActive ? activeClass : inactiveClass
+                    }`;
+                  }}
+                >
+                  {Icon && <Icon
+                    className={`mr-3 h-5 w-5 ${
+                      item === "bin"
+                        ? "text-current group-hover:text-current"
+                        : "text-gray-500 group-hover:text-blue-500"
+                    }`}
+                  />}
+                  {routeMapping[item]}
+                </NavLink>
+              );
+            })}
           </nav>
 
           {/* Logout Button */}

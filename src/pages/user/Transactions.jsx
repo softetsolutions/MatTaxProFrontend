@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { ArrowUpDown, Edit, Trash2 } from "lucide-react";
+import { jwtDecode } from "jwt-decode";
 import axios from "axios";
 
 export default function TransactionsPage() {
@@ -21,11 +22,27 @@ export default function TransactionsPage() {
   useEffect(() => {
     const fetchTransactions = async () => {
       try {
-        const response = await axios.get(
-          "http://localhost:5005/transaction/25"
+        const userId = jwtDecode(localStorage.getItem("userToken")).id
+        // const response = await axios.get(
+        //   `${import.meta.env.VITE_BASE_URL}/transaction?userId=${userId}`
+        // );
+
+
+        let response = await fetch(
+          `${import.meta.env.VITE_BASE_URL}/transaction?userId=${userId}`,
+          {
+            method: "GET",
+            credentials: "include",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            
+          }
         );
-        console.log("API Response:", response.data);
-        setTransactions(response.data);
+        response = await response.json()
+
+        console.log("API Response:", response);
+        setTransactions(response);
         setError(null);
       } catch (err) {
         setError("Failed to fetch transactions. Please try again later.");
@@ -155,7 +172,7 @@ export default function TransactionsPage() {
         amount: transactionToEdit.amount.replace("$", ""),
         category: transactionToEdit.category,
         type: transactionToEdit.type,
-        vendorId: transactionToEdit.vendorId,
+        vendorId: transactionToEdit.vendorid,
       });
       setEditingId(id);
       setShowModal(true);
@@ -233,11 +250,11 @@ export default function TransactionsPage() {
             <thead>
               <tr className="text-left text-sm font-medium text-gray-500 border-b border-gray-200">
                 {[
-                  { field: "date", label: "Date" },
+                  { field: "created_at", label: "Date" },
                   { field: "amount", label: "Amount" },
                   { field: "category", label: "Category" },
                   { field: "type", label: "Type" },
-                  { field: "vendorId", label: "Vendor ID" },
+                  { field: "vendorid", label: "Vendor ID" },
                   { field: "actions", label: "Actions" },
                 ].map((header) => (
                   <th key={header.field} className="px-4 py-3 hover:bg-gray-50">
@@ -278,7 +295,7 @@ export default function TransactionsPage() {
                     className="hover:bg-gray-50 transition-colors"
                   >
                     <td className="px-4 py-3 text-sm text-gray-900">
-                      {txn.date}
+                      {txn.created_at}
                     </td>
                     <td className="px-4 py-3 text-sm font-medium text-gray-900">
                       {txn.amount}
@@ -291,7 +308,7 @@ export default function TransactionsPage() {
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-900">
                       {" "}
-                      {txn.vendorId}
+                      {txn.vendorid}
                     </td>
                     <td className="px-4 py-3 text-sm">
                       <div className="flex gap-2">
@@ -330,6 +347,12 @@ export default function TransactionsPage() {
                 onClick={() => {
                   setShowModal(false);
                   setEditingId(null);
+                  setFormData({
+                    amount: "",
+                    category: "",
+                    type: "debit",
+                    vendorId: "",
+                  })
                 }}
                 className="text-gray-500 hover:cursor-pointer hover:text-red-500"
               >

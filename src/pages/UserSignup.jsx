@@ -90,7 +90,7 @@ export default function UserSignupPage() {
     setIsLoading(true);
 
     try {
-      const user = await fetch(`${import.meta.env.VITE_BASE_URL}/users`, {  // Change the URL based on your API route
+      const user = await fetch(`${import.meta.env.VITE_BASE_URL}/auth/register`, {  // Change the URL based on your API route
         method: "POST",
         headers: {
             "Content-Type": "application/json"
