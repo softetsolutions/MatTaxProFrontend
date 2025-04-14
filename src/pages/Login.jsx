@@ -93,9 +93,10 @@ export default function LoginPage() {
     try {
       // Simulate authentication
       let user = await fetch(
-        `${import.meta.env.VITE_BASE_URL}/user/jwt/createSession`,
+        `${import.meta.env.VITE_BASE_URL}/auth/login`,
         {
           method: "POST",
+          credentials: "include",
           headers: {
             "Content-Type": "application/json",
           },
@@ -106,8 +107,12 @@ export default function LoginPage() {
         }
       );
 
+      if(user.status !== 200){
+        throw new Error("Error logging in");
+      }
       user = await user.json();
-      localStorage.setItem("userToken", user.authToken);
+      console.log("user",user)
+      localStorage.setItem("userToken", user.data);
       toast.success("Wohha logged in successfully!");
       navigate("/dashboard");
     } catch (e) {

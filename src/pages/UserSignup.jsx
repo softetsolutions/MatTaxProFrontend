@@ -3,6 +3,8 @@ import { toast } from "react-toastify";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { Eye, EyeOff, ArrowLeft} from "lucide-react";
 import Header from "../components/Header";
+import PhoneInput from "react-phone-input-2";
+import "react-phone-input-2/lib/style.css";
 
 export default function UserSignupPage() {
   const navigate = useNavigate();
@@ -11,6 +13,7 @@ export default function UserSignupPage() {
     email: "",
     password: "",
     confirmPassword: "",
+    phone: "",
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -32,6 +35,21 @@ export default function UserSignupPage() {
         delete newErrors[name];
         return newErrors;
       });
+    }
+  };
+
+  const handlePhoneChange = (value) => {
+    setFormData((prev) => ({
+      ...prev,
+      phone: value,
+    }))
+
+    if (errors.phone) {
+      setErrors((prev) => {
+        const newErrors = { ...prev }
+        delete newErrors.phone
+        return newErrors
+      })
     }
   };
 
@@ -72,7 +90,7 @@ export default function UserSignupPage() {
     setIsLoading(true);
 
     try {
-      const user = await fetch(`${import.meta.env.VITE_BASE_URL}/users`, {  // Change the URL based on your API route
+      const user = await fetch(`${import.meta.env.VITE_BASE_URL}/auth/register`, {  // Change the URL based on your API route
         method: "POST",
         headers: {
             "Content-Type": "application/json"
@@ -85,8 +103,12 @@ export default function UserSignupPage() {
             role: role,
         })
     })
-    toast.success("Wohha signed up successfully!");
-      navigate("/dashboard");
+    if(user.status !== 200){
+      toast.error("Error signing up !!")
+      throw new Error("Error signing up");
+    }
+    toast.success("Wohha signed up successfully!, PLs Login");
+      navigate("/login");
     } catch {
       setErrors({ form: "An error occurred. Please try again." });
     } finally {
@@ -168,9 +190,32 @@ export default function UserSignupPage() {
                     className="w-full p-3 bg-zinc-800 border border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400"
                     placeholder="user@example.com"
                   />
-                  {errors.email && (
-                    <p className="mt-1 text-xs text-red-400">{errors.email}</p>
-                  )}
+                  {errors.email && <p className="mt-1 text-xs text-red-400">{errors.email}</p>}
+                </div>
+
+                {/* Phone Number */}
+                <div>
+                  <label htmlFor="phone" className="block text-sm font-medium mb-1.5 text-gray-300">
+                    Phone Number
+                  </label>
+                  <div className="phone-input-container">
+                    <PhoneInput
+                      country={"us"}
+                      value={formData.phone}
+                      onChange={handlePhoneChange}
+                      inputProps={{
+                        name: "phone",
+                        id: "phone",
+                        required: true,
+                        className: "w-full p-3 bg-zinc-800 text-white",
+                      }}
+                      containerClass="phone-input"
+                      buttonClass="phone-dropdown-button"
+                      dropdownClass="phone-dropdown"
+                      inputStyle={{paddingLeft:"50px"}}
+                    />
+                  </div>
+                  {errors.phone && <p className="mt-1 text-xs text-red-400">{errors.phone}</p>}
                 </div>
 
                 {/* Password */}
