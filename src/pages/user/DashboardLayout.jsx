@@ -1,13 +1,44 @@
-import { NavLink, Outlet } from "react-router-dom";
+import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
 import { History, LogOut, User, Trash2 } from "lucide-react";
 import { routeMapping, iconMapping } from "../../utils/constant";
+import { toast } from "react-toastify";
 
 export default function DashboardLayout() {
+  const navigate = useNavigate();
 
   const navigation = jwtDecode(localStorage.getItem("userToken")).allowedRoutes.filter((item)=> Object.keys(routeMapping).includes(item));
 
   console.log("navigation",navigation)
+
+  const handleLogOut = async()=>{
+    try {
+          // Simulate authentication
+          let user = await fetch(
+            `${import.meta.env.VITE_BASE_URL}/auth/logout`,
+            {
+              method: "POST",
+              credentials: "include",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+              }),
+            }
+          );
+    
+          if(user.status !== 200){
+            toast.fail("Error logging out");
+            throw new Error("Error logging out");
+          }
+          localStorage.removeItem("userToken");
+          toast.success("Wohha logged out successfully!");
+          navigate("/");
+        } catch (e) {
+          setError("Please try again.");
+          console.error(e);
+        }
+  }
 
   return (
     <div className="flex min-h-screen bg-white">
@@ -64,9 +95,7 @@ export default function DashboardLayout() {
           {/* Logout Button */}
           <div className="mt-auto">
             <button
-              onClick={() => {
-                console.log("Logout clicked");
-              }}
+              onClick={handleLogOut}
               className="group flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 rounded-lg w-full transition-colors hover:cursor-pointer "
             >
               <LogOut className="mr-3 h-5 w-5 text-gray-500 group-hover:text-red-500" />

@@ -18,17 +18,20 @@ export default function BinPage() {
         const userId = decoded.id;
 
         const queryParams = new URLSearchParams({
-          userId: userId
+          userId: userId,
         }).toString();
 
-        const response = await fetch(`${import.meta.env.VITE_BASE_URL}/transaction/deleted?${queryParams}`, {
-          method: 'GET',
-          headers: {
-            'Authorization': token,
-            'Content-Type': 'application/json'
-          },
-          credentials: 'include'
-        });
+        const response = await fetch(
+          `${import.meta.env.VITE_BASE_URL}/transaction/deleted?${queryParams}`,
+          {
+            method: "GET",
+            headers: {
+              Authorization: token,
+              "Content-Type": "application/json",
+            },
+            credentials: "include",
+          }
+        );
 
         if (response.status === 404) {
           setDeletedTransactions([]);
@@ -38,7 +41,9 @@ export default function BinPage() {
 
         if (!response.ok) {
           const errorData = await response.json();
-          throw new Error(errorData.error || 'Failed to fetch deleted transactions');
+          throw new Error(
+            errorData.error || "Failed to fetch deleted transactions"
+          );
         }
 
         const data = await response.json();
@@ -46,12 +51,15 @@ export default function BinPage() {
           setDeletedTransactions(data);
         } else {
           console.error("Unexpected data format:", data);
-          throw new Error('Received invalid data format from server');
+          throw new Error("Received invalid data format from server");
         }
         setLoading(false);
       } catch (err) {
         console.error("API Error:", err);
-        setError(err.message || "Failed to fetch deleted transactions. Please try again later.");
+        setError(
+          err.message ||
+            "Failed to fetch deleted transactions. Please try again later."
+        );
         setDeletedTransactions([]);
         setLoading(false);
       }
@@ -76,33 +84,47 @@ export default function BinPage() {
       const userId = decoded.id;
 
       const queryParams = new URLSearchParams({
-        userId: userId
+        userId: userId,
       }).toString();
 
-      const response = await fetch(`${import.meta.env.VITE_BASE_URL}/transaction/restore?${queryParams}`, {
-        method: 'PATCH',
-        headers: {
-          'Authorization': token,
-          'Content-Type': 'application/json'
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          transactionId: id
-        })
-      });
+      const response = await toast.promise(
+        fetch(
+          `${import.meta.env.VITE_BASE_URL}/transaction/restore?${queryParams}`,
+          {
+            method: "PATCH",
+            headers: {
+              Authorization: token,
+              "Content-Type": "application/json",
+            },
+            credentials: "include",
+            body: JSON.stringify({
+              transactionId: id,
+            }),
+          }
+        ),
+        {
+          pending: "Restoring Transaction..!!",
+          success: "Transaction Restored Successfully 👌",
+          error: "Problem in restoring transaction 🤯",
+        }
+      );
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to restore transaction');
+        throw new Error(data.error || "Failed to restore transaction");
       }
 
       // filtering from local state
-      setDeletedTransactions(deletedTransactions.filter((transaction) => transaction.id !== id));
-      toast.success(data.message || "Transaction restored successfully");
+      setDeletedTransactions(
+        deletedTransactions.filter((transaction) => transaction.id !== id)
+      );
+      // toast.success(data.message || "Transaction restored successfully");
     } catch (err) {
       console.error("Restore failed:", err);
-      toast.error(err.message || "Failed to restore transaction. Please try again.");
+      // toast.error(
+      //   err.message || "Failed to restore transaction. Please try again."
+      // );
     }
   };
 
@@ -113,32 +135,51 @@ export default function BinPage() {
       const userId = decoded.id;
 
       const queryParams = new URLSearchParams({
-        userId: userId
+        userId: userId,
       }).toString();
 
-      const response = await fetch(`${import.meta.env.VITE_BASE_URL}/transaction/deletePermanently?${queryParams}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': token,
-          'Content-Type': 'application/json'
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          transactionId: id
-        })
-      });
+      const response = await toast.promise(
+        fetch(
+          `${
+            import.meta.env.VITE_BASE_URL
+          }/transaction/deletePermanently?${queryParams}`,
+          {
+            method: "DELETE",
+            headers: {
+              Authorization: token,
+              "Content-Type": "application/json",
+            },
+            credentials: "include",
+            body: JSON.stringify({
+              transactionId: id,
+            }),
+          }
+        ),
+        {
+          pending: "Deleting Transaction..!!",
+          success: "Transaction Deleted Successfully 👌",
+          error: "Problem in deleting transaction 🤯",
+        }
+      );
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to permanently delete transaction');
+        throw new Error(
+          data.error || "Failed to permanently delete transaction"
+        );
       }
 
-      setDeletedTransactions(deletedTransactions.filter((transaction) => transaction.id !== id));
-      toast.success(data.message || "Transaction deleted permanently");
+      setDeletedTransactions(
+        deletedTransactions.filter((transaction) => transaction.id !== id)
+      );
+      // toast.success(data.message || "Transaction deleted permanently");
     } catch (err) {
       console.error("Permanent delete failed:", err);
-      toast.error(err.message || "Failed to delete transaction permanently. Please try again.");
+      // toast.error(
+      //   err.message ||
+      //     "Failed to delete transaction permanently. Please try again."
+      // );
     }
   };
 
@@ -146,7 +187,7 @@ export default function BinPage() {
     const modifier = sortDirection === "asc" ? 1 : -1;
 
     if (sortField === "transactionId") {
-      return a.transactionId.localeCompare(b.transactionId) * modifier;
+      return a?.transactionId?.localeCompare(b.transactionId) * modifier;
     } else if (sortField === "amount") {
       const amountA = Number.parseFloat(a.amount.replace("$", ""));
       const amountB = Number.parseFloat(b.amount.replace("$", ""));
@@ -196,7 +237,7 @@ export default function BinPage() {
             <thead>
               <tr className="text-left text-sm font-medium text-gray-500 border-b border-gray-200">
                 {[
-                  { field: "transactionId", label: "Transaction ID" },
+                  // { field: "transactionId", label: "Transaction ID" },
                   { field: "amount", label: "Amount" },
                   { field: "category", label: "Category" },
                   { field: "type", label: "Type" },
@@ -247,9 +288,6 @@ export default function BinPage() {
                     key={transaction.id}
                     className="hover:bg-gray-50 transition-colors"
                   >
-                    <td className="px-4 py-3 text-sm text-gray-900">
-                      {transaction.transactionId}
-                    </td>
                     <td className="px-4 py-3 text-sm font-medium text-gray-900">
                       {transaction.amount}
                     </td>

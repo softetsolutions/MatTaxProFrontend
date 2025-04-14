@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
 import { ArrowUpDown, Edit, Trash2 } from "lucide-react";
 import { jwtDecode } from "jwt-decode";
+import { VendorList } from "../../utils/constant";
 import axios from "axios";
+import { toast } from "react-toastify";
 
 export default function TransactionsPage() {
   const [sortField, setSortField] = useState("date");
@@ -12,22 +14,21 @@ export default function TransactionsPage() {
     amount: "",
     category: "",
     type: "debit",
-    vendorId: "",
+    vendor: "",
   });
   const [transactions, setTransactions] = useState([]);
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [userId, setUserId] = useState(null);
+  const [refreshTableList, setRefreshTableList] = useState(false);
 
   useEffect(() => {
     const fetchTransactions = async () => {
       try {
-        const userId = jwtDecode(localStorage.getItem("userToken")).id
-        // const response = await axios.get(
-        //   `${import.meta.env.VITE_BASE_URL}/transaction?userId=${userId}`
-        // );
+        const userId = jwtDecode(localStorage.getItem("userToken")).id;
 
-
+        setUserId(userId);
         let response = await fetch(
           `${import.meta.env.VITE_BASE_URL}/transaction?userId=${userId}`,
           {
@@ -36,14 +37,29 @@ export default function TransactionsPage() {
             headers: {
               "Content-Type": "application/json",
             },
-            
           }
         );
-        response = await response.json()
-
-        console.log("API Response:", response);
+        if (response.status !== 200) {
+          throw new Error("Error logging in");
+        }
+        response = await response.json();
         setTransactions(response);
-        setError(null);
+
+        let transactionLogs = await fetch(
+          `${
+            import.meta.env.VITE_BASE_URL
+          }/transaction/transactionLog?userId=${userId}&transactionId=${64}`,
+          {
+            method: "GET",
+            credentials: "include",
+            headers: {
+              "Content-Type": "application/json",
+            },
+          }
+        );
+        console.log("transactionLogs", transactionLogs);
+
+        // setError(null);
       } catch (err) {
         setError("Failed to fetch transactions. Please try again later.");
         console.error("API Error:", err);
@@ -52,7 +68,7 @@ export default function TransactionsPage() {
       }
     };
     fetchTransactions();
-  }, []);
+  }, [refreshTableList]);
 
   const handleSort = (field) => {
     if (sortField === field) {
@@ -94,67 +110,75 @@ export default function TransactionsPage() {
     try {
       if (editingId) {
         // Update existing transaction
-        const existingTransaction = transactions.find(
-          (txn) => txn.id === editingId
-        );
         const transactionData = {
-          amount: parseFloat(formData.amount),
-          category: formData.category,
-          type: formData.type,
-          vendorId: formData.vendorId,
-          userId: existingTransaction.userId,
-          isDeleted: existingTransaction.isDeleted,
+          transactionId: editingId,
+          newAmount: formData.amount || null,
+          newCategory: formData.category || null,
+          newType: formData.type || null,
+          updatedByUserId: userId,
         };
 
-        const response = await axios.post(
-          `http://localhost:5005/transaction/update`,
-          transactionData
+        let transaction = await toast.promise(
+          fetch(
+            `${
+              import.meta.env.VITE_BASE_URL
+            }/transaction/update?userId=${userId}`,
+            {
+              method: "POST",
+              credentials: "include",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ ...transactionData }),
+            }
+          ),
+          {
+            pending: "Updating Transaction..!!",
+            success: "Transaction Updated Successfully 👌",
+            error: "Problem in saving transaction 🤯",
+          }
         );
 
-        // Fix here: Ensure amount is treated as a number
-        const updatedAmount = Number(response.data.amount);
-
-        setTransactions(
-          transactions.map((txn) =>
-            txn.id === editingId
-              ? {
-                  ...response.data,
-                  amount: `$${
-                    isNaN(updatedAmount) ? "0.00" : updatedAmount.toFixed(2)
-                  }`,
-                }
-              : txn
-          )
-        );
+        if (transaction.status !== 200) {
+          throw new Error("Error in api call");
+        }
       } else {
         // Create new transaction
         const transactionData = {
           amount: parseFloat(formData.amount),
           category: formData.category,
           type: formData.type,
-          vendorId: 2,
-          userId: 25, // Hardcoded user ID from fetch URL
+          vendorId: formData.vendor,
+          userId: userId, // Hardcoded user ID from fetch URL
           isdeleted: false,
         };
 
-        const response = await axios.post(
-          "http://localhost:5005/transaction",
-          transactionData
+        let transaction = await toast.promise(
+          fetch(
+            `${import.meta.env.VITE_BASE_URL}/transaction/?userId=${userId}`,
+            {
+              method: "POST",
+              credentials: "include",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ ...transactionData }),
+            }
+          ),
+          {
+            pending: "Saving Transaction..!!",
+            success: "Transaction Saved Successfully 👌",
+            error: "Problem in saving transaction 🤯",
+          }
         );
 
-        // Fix here: Ensure amount is treated as a number
-        const newAmount = Number(response.data.amount);
+        console.log("transaction", await transaction.json());
 
-        setTransactions([
-          ...transactions,
-          {
-            ...response.data,
-            amount: `$${isNaN(newAmount) ? "0.00" : newAmount.toFixed(2)}`,
-            date: new Date().toISOString().split("T")[0],
-          },
-        ]);
+        if (transaction.status !== 200) {
+          throw new Error("Error in api call");
+        }
       }
-
+      setRefreshTableList((prev) => !prev);
       setFormData({ amount: "", category: "", type: "debit", vendorId: "" });
       setFiles([]);
       setShowModal(false);
@@ -180,14 +204,36 @@ export default function TransactionsPage() {
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm("Are you sure you want to delete this transaction?")) {
-      try {
-        await axios.delete(`http://localhost:5005/transaction/${id}`);
-        setTransactions(transactions.filter((txn) => txn.id !== id));
-      } catch (err) {
-        console.error("Delete failed:", err);
-        alert("Delete failed. Please try again.");
+    try {
+      const res = await toast.promise(
+        fetch(
+          `${
+            import.meta.env.VITE_BASE_URL
+          }/transaction/?userId=${userId}&transactionId=${id}`,
+          {
+            method: "DELETE",
+            credentials: "include", // Required to send HttpOnly cookie
+            headers: {
+              "Content-Type": "application/json",
+            },
+          }
+        ),
+        {
+          pending: "Deleting Transaction",
+          success: "Successfully Deleted Transaction 👌",
+          error: "Got Error Deleting transaction, Try again 🤯",
+        }
+      );
+
+      if (res.status !== 200) {
+        throw new Error("Got error in api");
       }
+
+      // toast.success("Transaction moved to bin");
+      setRefreshTableList((prev) => !prev);
+    } catch (e) {
+      console.error(e);
+      // toast.error("Problem in deleting transaction. Try again");
     }
   };
 
@@ -352,7 +398,7 @@ export default function TransactionsPage() {
                     category: "",
                     type: "debit",
                     vendorId: "",
-                  })
+                  });
                 }}
                 className="text-gray-500 hover:cursor-pointer hover:text-red-500"
               >
@@ -416,7 +462,7 @@ export default function TransactionsPage() {
                   </select>
                 </div>
 
-                <div className="mb-4">
+                {/* <div className="mb-4">
                   <label
                     className="block text-gray-700 text-sm font-bold mb-2"
                     htmlFor="vendorId"
@@ -433,6 +479,31 @@ export default function TransactionsPage() {
                     placeholder="Enter vendor ID"
                     required
                   />
+                </div> */}
+
+                <div className="mb-4">
+                  <label
+                    className="block text-gray-700 text-sm font-bold mb-2"
+                    htmlFor="category"
+                  >
+                    Choose Vendor
+                  </label>
+                  <select
+                    id="vendor"
+                    name="vendor"
+                    value={formData.vendor}
+                    onChange={handleInputChange}
+                    className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
+                    required
+                  >
+                    <option value="" disabled>
+                      Select a vendor
+                    </option>
+                    <option value="5">Dmart</option>
+                    <option value="2">Flipkart</option>
+                    <option value="8">Chadstone Shopping Centre</option>
+                    <option value="34">Westfield Fountain Gate</option>
+                  </select>
                 </div>
 
                 <div className="mb-6">
