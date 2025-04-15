@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { ArrowUpDown, Edit, Trash2 } from "lucide-react";
 import { jwtDecode } from "jwt-decode";
-import { VendorList } from "../../utils/constant";
-import axios from "axios";
+// import { VendorList } from "../../utils/constant";
+// import axios from "axios";
 import { toast } from "react-toastify";
 
 export default function TransactionsPage() {
@@ -118,11 +118,9 @@ export default function TransactionsPage() {
           updatedByUserId: userId,
         };
 
-        let transaction = await toast.promise(
+        await toast.promise(
           fetch(
-            `${
-              import.meta.env.VITE_BASE_URL
-            }/transaction/update?userId=${userId}`,
+            `${import.meta.env.VITE_BASE_URL}/transaction/update?userId=${userId}`,
             {
               method: "POST",
               credentials: "include",
@@ -133,15 +131,12 @@ export default function TransactionsPage() {
             }
           ),
           {
-            pending: "Updating Transaction..!!",
-            success: "Transaction Updated Successfully 👌",
-            error: "Problem in saving transaction 🤯",
+            pending: "Updating transaction...",
+            success: "Transaction updated successfully 👌",
+            error: "Failed to update transaction 🤯"
           }
         );
 
-        if (transaction.status !== 200) {
-          throw new Error("Error in api call");
-        }
       } else {
         // Create new transaction
         const transactionData = {
@@ -149,11 +144,11 @@ export default function TransactionsPage() {
           category: formData.category,
           type: formData.type,
           vendorId: formData.vendor,
-          userId: userId, // Hardcoded user ID from fetch URL
+          userId: userId,
           isdeleted: false,
         };
 
-        let transaction = await toast.promise(
+        await toast.promise(
           fetch(
             `${import.meta.env.VITE_BASE_URL}/transaction/?userId=${userId}`,
             {
@@ -166,18 +161,13 @@ export default function TransactionsPage() {
             }
           ),
           {
-            pending: "Saving Transaction..!!",
-            success: "Transaction Saved Successfully 👌",
-            error: "Problem in saving transaction 🤯",
+            pending: "Creating transaction...",
+            success: "Transaction created successfully 👌",
+            error: "Failed to create transaction 🤯"
           }
         );
-
-        console.log("transaction", await transaction.json());
-
-        if (transaction.status !== 200) {
-          throw new Error("Error in api call");
-        }
       }
+
       setRefreshTableList((prev) => !prev);
       setFormData({ amount: "", category: "", type: "debit", vendorId: "" });
       setFiles([]);
@@ -185,7 +175,7 @@ export default function TransactionsPage() {
       setEditingId(null);
     } catch (err) {
       console.error("Operation failed:", err);
-      alert("Operation failed. Please try again.");
+      toast.error(err.message || "Operation failed. Please try again.");
     }
   };
 
