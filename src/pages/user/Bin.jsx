@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { ArrowUpDown, Trash2, RefreshCw } from "lucide-react";
+import { jwtDecode } from "jwt-decode";
+import { toast } from "react-toastify";
 
 export default function BinPage() {
   const [deletedTransactions, setDeletedTransactions] = useState([]);
@@ -11,56 +13,54 @@ export default function BinPage() {
   useEffect(() => {
     const fetchDeletedTransactions = async () => {
       try {
-        setTimeout(() => {
-          setDeletedTransactions([
-            {
-              id: 1,
-              transactionId: "TRX-001",
-              amount: "$125.00",
-              category: "Shopping",
-              type: "debit",
-              deletedAt: "2023-10-15T14:30:00Z",
+        const token = localStorage.getItem("userToken");
+        const decoded = jwtDecode(token);
+        const userId = decoded.id;
+
+        const queryParams = new URLSearchParams({
+          userId: userId,
+        }).toString();
+
+        const response = await fetch(
+          `${import.meta.env.VITE_BASE_URL}/transaction/deleted?${queryParams}`,
+          {
+            method: "GET",
+            headers: {
+              Authorization: token,
+              "Content-Type": "application/json",
             },
-            {
-              id: 2,
-              transactionId: "TRX-002",
-              amount: "$89.99",
-              category: "Entertainment",
-              type: "debit",
-              deletedAt: "2023-10-16T09:45:00Z",
-            },
-            {
-              id: 3,
-              transactionId: "TRX-003",
-              amount: "$500.00",
-              category: "Salary",
-              type: "credit",
-              deletedAt: "2023-10-17T11:20:00Z",
-            },
-            {
-              id: 4,
-              transactionId: "TRX-004",
-              amount: "$45.50",
-              category: "Groceries",
-              type: "debit",
-              deletedAt: "2023-10-18T16:15:00Z",
-            },
-            {
-              id: 5,
-              transactionId: "TRX-005",
-              amount: "$200.00",
-              category: "Freelance",
-              type: "credit",
-              deletedAt: "2023-10-19T10:30:00Z",
-            },
-          ]);
-          setLoading(false);
-        }, 1000);
-      } catch (err) {
-        setError(
-          "Failed to fetch deleted transactions. Please try again later."
+            credentials: "include",
+          }
         );
+
+        if (response.status === 404) {
+          setDeletedTransactions([]);
+          setLoading(false);
+          return;
+        }
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(
+            errorData.error || "Failed to fetch deleted transactions"
+          );
+        }
+
+        const data = await response.json();
+        if (Array.isArray(data)) {
+          setDeletedTransactions(data);
+        } else {
+          console.error("Unexpected data format:", data);
+          throw new Error("Received invalid data format from server");
+        }
+        setLoading(false);
+      } catch (err) {
         console.error("API Error:", err);
+        setError(
+          err.message ||
+            "Failed to fetch deleted transactions. Please try again later."
+        );
+        setDeletedTransactions([]);
         setLoading(false);
       }
     };
@@ -79,23 +79,107 @@ export default function BinPage() {
 
   const handleRestore = async (id) => {
     try {
+      const token = localStorage.getItem("userToken");
+      const decoded = jwtDecode(token);
+      const userId = decoded.id;
+
+      const queryParams = new URLSearchParams({
+        userId: userId,
+      }).toString();
+
+      const response = await toast.promise(
+        fetch(
+          `${import.meta.env.VITE_BASE_URL}/transaction/restore?${queryParams}`,
+          {
+            method: "PATCH",
+            headers: {
+              Authorization: token,
+              "Content-Type": "application/json",
+            },
+            credentials: "include",
+            body: JSON.stringify({
+              transactionId: id,
+            }),
+          }
+        ),
+        {
+          pending: "Restoring Transaction..!!",
+          success: "Transaction Restored Successfully 👌",
+          error: "Problem in restoring transaction 🤯",
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to restore transaction");
+      }
+
+      // filtering from local state
       setDeletedTransactions(
         deletedTransactions.filter((transaction) => transaction.id !== id)
       );
+      // toast.success(data.message || "Transaction restored successfully");
     } catch (err) {
       console.error("Restore failed:", err);
-      alert("Restore failed. Please try again.");
+      // toast.error(
+      //   err.message || "Failed to restore transaction. Please try again."
+      // );
     }
   };
 
   const handlePermanentDelete = async (id) => {
     try {
+      const token = localStorage.getItem("userToken");
+      const decoded = jwtDecode(token);
+      const userId = decoded.id;
+
+      const queryParams = new URLSearchParams({
+        userId: userId,
+      }).toString();
+
+      const response = await toast.promise(
+        fetch(
+          `${
+            import.meta.env.VITE_BASE_URL
+          }/transaction/deletePermanently?${queryParams}`,
+          {
+            method: "DELETE",
+            headers: {
+              Authorization: token,
+              "Content-Type": "application/json",
+            },
+            credentials: "include",
+            body: JSON.stringify({
+              transactionId: id,
+            }),
+          }
+        ),
+        {
+          pending: "Deleting Transaction..!!",
+          success: "Transaction Deleted Successfully 👌",
+          error: "Problem in deleting transaction 🤯",
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.error || "Failed to permanently delete transaction"
+        );
+      }
+
       setDeletedTransactions(
         deletedTransactions.filter((transaction) => transaction.id !== id)
       );
+      // toast.success(data.message || "Transaction deleted permanently");
     } catch (err) {
       console.error("Permanent delete failed:", err);
-      alert("Permanent delete failed. Please try again.");
+      // toast.error(
+      //   err.message ||
+      //     "Failed to delete transaction permanently. Please try again."
+      // );
     }
   };
 
@@ -103,7 +187,7 @@ export default function BinPage() {
     const modifier = sortDirection === "asc" ? 1 : -1;
 
     if (sortField === "transactionId") {
-      return a.transactionId.localeCompare(b.transactionId) * modifier;
+      return a?.transactionId?.localeCompare(b.transactionId) * modifier;
     } else if (sortField === "amount") {
       const amountA = Number.parseFloat(a.amount.replace("$", ""));
       const amountB = Number.parseFloat(b.amount.replace("$", ""));
@@ -153,7 +237,7 @@ export default function BinPage() {
             <thead>
               <tr className="text-left text-sm font-medium text-gray-500 border-b border-gray-200">
                 {[
-                  { field: "transactionId", label: "Transaction ID" },
+                  // { field: "transactionId", label: "Transaction ID" },
                   { field: "amount", label: "Amount" },
                   { field: "category", label: "Category" },
                   { field: "type", label: "Type" },
@@ -204,9 +288,6 @@ export default function BinPage() {
                     key={transaction.id}
                     className="hover:bg-gray-50 transition-colors"
                   >
-                    <td className="px-4 py-3 text-sm text-gray-900">
-                      {transaction.transactionId}
-                    </td>
                     <td className="px-4 py-3 text-sm font-medium text-gray-900">
                       {transaction.amount}
                     </td>

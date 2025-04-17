@@ -103,8 +103,12 @@ export default function UserSignupPage() {
             role: role,
         })
     })
-    toast.success("Wohha signed up successfully!");
-      navigate("/dashboard");
+    if(user.status !== 200){
+      toast.error("Error signing up !!")
+      throw new Error("Error signing up");
+    }
+    toast.success("Wohha signed up successfully!, PLs Login");
+      navigate("/login");
     } catch {
       setErrors({ form: "An error occurred. Please try again." });
     } finally {

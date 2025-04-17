@@ -1,9 +1,11 @@
-import { useState} from "react";
+import { useState, useEffect} from "react";
 import { Menu, X, Receipt } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { jwtDecode } from "jwt-decode";
 
 function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const navigate = useNavigate();
 
   const toggleMenu = () => {
@@ -17,8 +19,25 @@ function Navbar() {
     }
   }
   const onLoginClick = () =>{
-    navigate("/login");
+    navigate(isLoggedIn ? "/dashboard" : "/login");
   }
+
+  useEffect(()=>{
+    const token = localStorage.getItem("userToken");
+    if (token) {
+      try {
+        const decoded = jwtDecode(token);
+        if (decoded && decoded.id) {
+          setIsLoggedIn(true);
+          return;
+        }
+      } catch (error) {
+        console.error("Invalid token:", error);
+        localStorage.removeItem("userToken");
+      }
+    }
+    setIsLoggedIn(false);
+  },[])
 
   return (
     <>
@@ -48,7 +67,7 @@ function Navbar() {
                 onClick={onLoginClick}
                 className="hidden md:block hover:cursor-pointer px-5 py-2 bg-orange-500 hover:bg-orange-600 text-white font-medium rounded-lg transition-colors"
               >
-                Login
+               {isLoggedIn ? "My Dashboard" : "Login"}
               </button>
 
               {/* Hamburger menu button  */}
