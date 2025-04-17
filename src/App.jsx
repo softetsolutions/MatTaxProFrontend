@@ -9,6 +9,7 @@ import TransactionLog from "./pages/user/TransactionLog";
 import AccountantPage from "./pages/user/AccountantManage";
 import Users from "./pages/user/Users";
 import Bin from "./pages/user/Bin";
+import Invitation from "./pages/user/Invitation";
 import ProtectRouteComp from "./components/ProtectRouteComp";
 
 function App() {
@@ -31,6 +32,7 @@ function App() {
           <Route path="addaccountant" element={<AccountantPage />} />
           <Route path="users" element={<Users />} />
           <Route path="bin" element={<Bin />} />
+          <Route path="invitations" element={<Invitation />} />
         </Route>
       </Routes>
     </>
