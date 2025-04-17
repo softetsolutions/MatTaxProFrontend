@@ -46,6 +46,7 @@ export const handleApproveInvitation = async (invitationId, invitations) => {
       'Authorization': token,
       'Content-Type': 'application/json'
     },
+    credentials: 'include',
     body: JSON.stringify({
       userId: invitation.userId,
       status: 'approved',
