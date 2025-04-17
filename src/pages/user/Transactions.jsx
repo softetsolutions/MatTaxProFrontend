@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { ArrowUpDown, Edit, Trash2 } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { ArrowUpDown, Edit, Trash2, ChevronDown, X } from "lucide-react";
 import { jwtDecode } from "jwt-decode";
 // import { VendorList } from "../../utils/constant";
 // import axios from "axios";
@@ -22,6 +22,23 @@ export default function TransactionsPage() {
   const [error, setError] = useState(null);
   const [userId, setUserId] = useState(null);
   const [refreshTableList, setRefreshTableList] = useState(false);
+  const [categorySearch, setCategorySearch] = useState("");
+  const [vendorSearch, setVendorSearch] = useState("");
+  const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
+  const [showVendorDropdown, setShowVendorDropdown] = useState(false);
+  
+  // dropdown options
+  const categoryOptions = ["Shopping", "Entertainment", "Groceries", "Utilities", "Transport", "Other"];
+  const vendorOptions = [
+    { id: "5", name: "Dmart" },
+    { id: "2", name: "Flipkart" },
+    { id: "8", name: "Chadstone Shopping Centre" },
+    { id: "34", name: "Westfield Fountain Gate" }
+  ];
+  
+  // Refs for dropdowns
+  const categoryRef = useRef(null);
+  const vendorRef = useRef(null);
 
   useEffect(() => {
     const fetchTransactions = async () => {
@@ -69,6 +86,23 @@ export default function TransactionsPage() {
     };
     fetchTransactions();
   }, [refreshTableList]);
+  
+  // Handle clicks outside of dropdowns
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (categoryRef.current && !categoryRef.current.contains(event.target)) {
+        setShowCategoryDropdown(false);
+      }
+      if (vendorRef.current && !vendorRef.current.contains(event.target)) {
+        setShowVendorDropdown(false);
+      }
+    }
+    
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   const handleSort = (field) => {
     if (sortField === field) {
@@ -224,6 +258,29 @@ export default function TransactionsPage() {
     } catch (e) {
       console.error(e);
       // toast.error("Problem in deleting transaction. Try again");
+    }
+  };
+  
+  // Filter functions dropdowns
+  const filteredCategories = categoryOptions.filter(category => 
+    category.toLowerCase().includes(categorySearch.toLowerCase())
+  );
+  
+  const filteredVendors = vendorOptions.filter(vendor => 
+    vendor.name.toLowerCase().includes(vendorSearch.toLowerCase())
+  );
+
+  const handleSelect = (type, value) => {
+    setFormData(prev => ({
+      ...prev,
+      [type]: type === 'vendor' ? value.id : value
+    }));
+    if (type === 'category') {
+      setCategorySearch("");
+      setShowCategoryDropdown(false);
+    } else {
+      setVendorSearch("");
+      setShowVendorDropdown(false);
     }
   };
 
@@ -425,75 +482,116 @@ export default function TransactionsPage() {
                   />
                 </div>
 
-                <div className="mb-4">
+                <div className="mb-4" ref={categoryRef}>
                   <label
                     className="block text-gray-700 text-sm font-bold mb-2"
                     htmlFor="category"
                   >
                     Category
                   </label>
-                  <select
-                    id="category"
-                    name="category"
-                    value={formData.category}
-                    onChange={handleInputChange}
-                    className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
-                    required
-                  >
-                    <option value="" disabled>
-                      Select a category
-                    </option>
-                    <option value="Shopping">Shopping</option>
-                    <option value="Entertainment">Entertainment</option>
-                    <option value="Groceries">Groceries</option>
-                    <option value="Utilities">Utilities</option>
-                    <option value="Transport">Transport</option>
-                    <option value="Other">Other</option>
-                  </select>
+                  <div className="relative">
+                    <div className="flex items-center w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer bg-white"
+                         onClick={() => setShowCategoryDropdown(!showCategoryDropdown)}>
+                      <span className="flex-grow text-gray-700">
+                        {formData.category || "Select a category"}
+                      </span>
+                      <ChevronDown className="w-4 h-4 text-gray-400" />
+                    </div>
+                    
+                    {showCategoryDropdown && (
+                      <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded shadow-lg">
+                        <div className="p-2 border-b">
+                          <div className="flex items-center border rounded bg-gray-50 text-black">
+                            <input
+                              type="text"
+                              value={categorySearch}
+                              onChange={(e) => setCategorySearch(e.target.value)}
+                              className="w-full p-2 bg-transparent focus:outline-none text-sm"
+                              placeholder="Search categories..."
+                              autoFocus
+                            />
+                            {categorySearch && (
+                              <button onClick={() => setCategorySearch("")} className="mr-2">
+                                <X className="w-4 h-4 text-gray-400" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                        <div className="max-h-60 overflow-y-auto">
+                          {filteredCategories.length > 0 ? (
+                            filteredCategories.map((category) => (
+                              <div
+                                key={category}
+                                onClick={() => handleSelect('category', category)}
+                                className="px-4 py-2 hover:bg-blue-50 cursor-pointer text-black"
+                              >
+                                {category}
+                              </div>
+                            ))
+                          ) : (
+                            <div className="p-2 text-gray-500 text-center">No results found</div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
-                {/* <div className="mb-4">
+                <div className="mb-4" ref={vendorRef}>
                   <label
                     className="block text-gray-700 text-sm font-bold mb-2"
-                    htmlFor="vendorId"
-                  >
-                    Vendor ID
-                  </label>
-                  <input
-                    type="text"
-                    id="vendorId"
-                    name="vendorId"
-                    value={formData.vendorId}
-                    onChange={handleInputChange}
-                    className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
-                    placeholder="Enter vendor ID"
-                    required
-                  />
-                </div> */}
-
-                <div className="mb-4">
-                  <label
-                    className="block text-gray-700 text-sm font-bold mb-2"
-                    htmlFor="category"
+                    htmlFor="vendor"
                   >
                     Choose Vendor
                   </label>
-                  <select
-                    id="vendor"
-                    name="vendor"
-                    value={formData.vendor}
-                    onChange={handleInputChange}
-                    className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
-                    required
-                  >
-                    <option value="" disabled>
-                      Select a vendor
-                    </option>
-                    <option value="5">Dmart</option>
-                    <option value="2">Flipkart</option>
-                    <option value="8">Chadstone Shopping Centre</option>
-                    <option value="34">Westfield Fountain Gate</option>
-                  </select>
+                  <div className="relative">
+                    <div className="flex items-center w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer bg-white"
+                         onClick={() => setShowVendorDropdown(!showVendorDropdown)}>
+                      <span className="flex-grow text-gray-700">
+                        {formData.vendor ? 
+                          vendorOptions.find(v => v.id === formData.vendor)?.name || formData.vendor : 
+                          "Select a vendor"}
+                      </span>
+                      <ChevronDown className="w-4 h-4 text-gray-400" />
+                    </div>
+                    
+                    {showVendorDropdown && (
+                      <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded shadow-lg">
+                        <div className="p-2 border-b">
+                          <div className="flex items-center border rounded bg-gray-50 text-black">
+                            <input
+                              type="text"
+                              value={vendorSearch}
+                              onChange={(e) => setVendorSearch(e.target.value)}
+                              className="w-full p-2 bg-transparent focus:outline-none text-sm"
+                              placeholder="Search vendors..."
+                              autoFocus
+                            />
+                            {vendorSearch && (
+                              <button onClick={() => setVendorSearch("")} className="mr-2">
+                                <X className="w-4 h-4 text-gray-400" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                        <div className="max-h-60 overflow-y-auto text-black">
+                          {filteredVendors.length > 0 ? (
+                            filteredVendors.map((vendor) => (
+                              <div
+                                key={vendor.id}
+                                onClick={() => handleSelect('vendor', vendor)}
+                                className="px-4 py-2 hover:bg-blue-50 cursor-pointer"
+                              >
+                                {vendor.name}
+                              </div>
+                            ))
+                          ) : (
+                            <div className="p-2 text-gray-500 text-center">No results found</div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <div className="mb-6">
