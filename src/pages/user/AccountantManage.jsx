@@ -44,7 +44,8 @@ export default function AccountantPage() {
           email: accountant.email,
           address: accountant.address || 'N/A',
           status: accountant.is_authorized === 'approved' ? 'authorized' : 
-                 accountant.is_authorized === 'pending' ? 'pending' : 'unauthorized',
+                 accountant.is_authorized === 'pending' ? 'pending' : 
+                 accountant.is_authorized === 'rejected' ? 'rejected' : 'unauthorized',
           createdAt: new Date(accountant.created_at).toLocaleDateString()
         }));
 
@@ -235,6 +236,8 @@ export default function AccountantPage() {
         return <span className="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">Pending</span>;
       case 'unauthorized':
         return <span className="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">Unauthorized</span>;
+      case 'rejected':
+        return <span className="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">Rejected</span>;
       default:
         return <span className="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">Unauthorized</span>;
     }
@@ -392,13 +395,17 @@ export default function AccountantPage() {
                     ? "text-green-600" 
                     : selectedAccountant.status === 'pending'
                       ? "text-yellow-600"
-                      : "text-red-600"
+                      : selectedAccountant.status === 'rejected'
+                        ? "text-red-600"
+                        : "text-gray-600"
                 }`}>
                   {selectedAccountant.status === 'authorized' 
                     ? "Authorized" 
                     : selectedAccountant.status === 'pending'
                       ? "Pending"
-                      : "Unauthorized"}
+                      : selectedAccountant.status === 'rejected'
+                        ? "Rejected"
+                        : "Unauthorized"}
                 </p>
               </div>
             </div>
