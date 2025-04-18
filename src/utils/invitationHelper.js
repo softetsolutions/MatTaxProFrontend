@@ -78,6 +78,7 @@ export const handleRejectInvitation = async (invitationId, invitations) => {
       'Authorization': token,
       'Content-Type': 'application/json'
     },
+    credentials: 'include',
     body: JSON.stringify({
       userId: invitation.userId,
       status: 'rejected',
