@@ -1,7 +1,10 @@
 import { useState, useEffect } from "react";
 import { ArrowUpDown } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { fetchAuthorizedUsers } from "../../utils/authorizedUsers";
 
 export default function Users() {
+  const navigate = useNavigate();
   const [users, setUsers] = useState([]);
   const [sortField, setSortField] = useState("lastName");
   const [sortDirection, setSortDirection] = useState("asc");
@@ -11,92 +14,25 @@ export default function Users() {
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        setTimeout(() => {
-          setUsers([
-            {
-              id: 1,
-              firstName: "John",
-              lastName: "Smith",
-              email: "john.smith@example.com",
-              phone: "+1 (555) 123-4567",
-              joinDate: "2023-01-15",
-              status: "active",
-            },
-            {
-              id: 2,
-              firstName: "Emily",
-              lastName: "Johnson",
-              email: "emily.johnson@accounting.com",
-              phone: "+1 (555) 234-5678",
-              joinDate: "2023-02-20",
-              status: "active",
-            },
-            {
-              id: 3,
-              firstName: "Michael",
-              lastName: "Brown",
-              email: "michael.brown@accounting.com",
-              phone: "+1 (555) 345-6789",
-              joinDate: "2023-03-10",
-              status: "inactive",
-            },
-            {
-              id: 4,
-              firstName: "Sarah",
-              lastName: "Davis",
-              email: "sarah.davis@example.com",
-              phone: "+1 (555) 456-7890",
-              joinDate: "2023-04-05",
-              status: "active",
-            },
-            {
-              id: 5,
-              firstName: "Robert",
-              lastName: "Wilson",
-              email: "robert.wilson@accounting.com",
-              phone: "+1 (555) 567-8901",
-              joinDate: "2023-05-12",
-              status: "active",
-            },
-            {
-              id: 6,
-              firstName: "Jennifer",
-              lastName: "Taylor",
-              email: "jennifer.taylor@example.com",
-              phone: "+1 (555) 678-9012",
-              joinDate: "2023-06-18",
-              status: "active",
-            },
-            {
-              id: 7,
-              firstName: "David",
-              lastName: "Anderson",
-              email: "david.anderson@example.com",
-              phone: "+1 (555) 789-0123",
-              joinDate: "2023-07-22",
-              status: "inactive",
-            },
-            {
-              id: 8,
-              firstName: "Lisa",
-              lastName: "Martinez",
-              email: "lisa.martinez@accounting.com",
-              phone: "+1 (555) 890-1234",
-              joinDate: "2023-08-30",
-              status: "active",
-            },
-          ]);
-          setLoading(false);
-        }, 1000);
+        setLoading(true);
+        setError(null);
+        const data = await fetchAuthorizedUsers();
+        setUsers(data);
       } catch (err) {
-        setError("Failed to fetch users");
+        setError(err.message || "Failed to fetch users");
         console.error("API Error:", err);
+        if (err.message.includes("Unauthorized")) {
+          setTimeout(() => {
+            navigate("/user/login");
+          }, 2000);
+        }
+      } finally {
         setLoading(false);
       }
     };
 
     fetchUsers();
-  }, []);
+  }, [navigate]);
 
   const handleSort = (field) => {
     if (sortField === field) {
@@ -107,18 +43,17 @@ export default function Users() {
     }
   };
 
-  // Sort users
   const sortedUsers = [...users].sort((a, b) => {
     const modifier = sortDirection === "asc" ? 1 : -1;
-
     if (
-      sortField === "firstName" ||
-      sortField === "lastName" ||
+      sortField === "fname" ||
+      sortField === "lname" ||
       sortField === "email" ||
       sortField === "phone"
     ) {
       return a[sortField].localeCompare(b[sortField]) * modifier;
     }
+    return 0;
   });
 
   if (loading) {
@@ -166,8 +101,8 @@ export default function Users() {
             <thead>
               <tr className="text-left text-sm font-medium text-gray-500 border-b border-gray-200">
                 {[
-                  { field: "firstName", label: "First Name" },
-                  { field: "lastName", label: "Last Name" },
+                  { field: "fname", label: "First Name" },
+                  { field: "lname", label: "Last Name" },
                   { field: "email", label: "Email" },
                   { field: "phone", label: "Phone Number" },
                 ].map((header) => (
@@ -195,7 +130,7 @@ export default function Users() {
                     colSpan={5}
                     className="px-4 py-6 text-center text-gray-500"
                   >
-                    No users found
+                    No users have been authorized yet
                   </td>
                 </tr>
               ) : (
@@ -205,10 +140,10 @@ export default function Users() {
                     className="hover:bg-gray-50 transition-colors"
                   >
                     <td className="px-4 py-3 text-sm text-gray-900">
-                      {user.firstName}
+                      {user.fname}
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-900">
-                      {user.lastName}
+                      {user.lname}
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-900">
                       {user.email}

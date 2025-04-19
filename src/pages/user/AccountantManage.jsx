@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react"
-import { ArrowUpDown, UserCheck, Info, Clock } from "lucide-react"
-import { toast } from 'react-toastify';
+import { useState, useEffect } from "react";
+import { ArrowUpDown, UserCheck, Info, Clock } from "lucide-react";
+import { toast } from "react-toastify";
 import { jwtDecode } from "jwt-decode";
 import { handleUnauthoriz } from "../../utils/helperFunction";
+import { useNavigate } from "react-router-dom";
 
 export default function AccountantPage() {
   const [accountants, setAccountants] = useState([]);
@@ -12,6 +13,7 @@ export default function AccountantPage() {
   const [selectedAccountant, setSelectedAccountant] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchAccountants = async () => {
@@ -21,14 +23,17 @@ export default function AccountantPage() {
         console.log(decoded);
         const userId = decoded.id;
 
-        const response = await fetch(`${import.meta.env.VITE_BASE_URL}/user/accountants/${userId}`, {
-          method: 'GET',
-          headers: {
-            'Authorization': token,
-            'Content-Type': 'application/json'
-          },
-          credentials: 'include'
-        });
+        const response = await fetch(
+          `${import.meta.env.VITE_BASE_URL}/user/accountants/${userId}`,
+          {
+            method: "GET",
+            headers: {
+              Authorization: token,
+              "Content-Type": "application/json",
+            },
+            credentials: "include",
+          }
+        );
 
         if (response.status !== 200) {
           const errorData = await response.json();
@@ -39,25 +44,32 @@ export default function AccountantPage() {
         }
 
         const data = await response.json();
-        
+
         // Transform the data to match our component's structure
-        const transformedData = data.map(accountant => ({
+        const transformedData = data.map((accountant) => ({
           id: accountant.id,
           accountantId: `ACC${String(accountant.id).padStart(3, "0")}`,
           name: `${accountant.fname} ${accountant.lname}`,
           email: accountant.email,
-          address: accountant.address || 'N/A',
-          status: accountant.is_authorized === 'approved' ? 'authorized' : 
-                 accountant.is_authorized === 'pending' ? 'pending' : 
-                 accountant.is_authorized === 'rejected' ? 'rejected' : 'unauthorized',
-          createdAt: new Date(accountant.created_at).toLocaleDateString()
+          address: accountant.address || "N/A",
+          status:
+            accountant.is_authorized === "approved"
+              ? "authorized"
+              : accountant.is_authorized === "pending"
+              ? "pending"
+              : accountant.is_authorized === "rejected"
+              ? "rejected"
+              : "unauthorized",
+          createdAt: new Date(accountant.created_at).toLocaleDateString(),
         }));
 
         setAccountants(transformedData);
         setLoading(false);
       } catch (err) {
         console.error("API Error:", err);
-        setError(err.message || "Failed to fetch accountants. Please try again later.");
+        setError(
+          err.message || "Failed to fetch accountants. Please try again later."
+        );
         setLoading(false);
       }
     };
@@ -80,80 +92,94 @@ export default function AccountantPage() {
       const decoded = jwtDecode(token);
       const userId = decoded.id;
 
-      const accountant = accountants.find(acc => acc.id === accountantId);
-      const isCurrentlyAuthorized = accountant.status === 'authorized';
+      const accountant = accountants.find((acc) => acc.id === accountantId);
+      const isCurrentlyAuthorized = accountant.status === "authorized";
 
       if (isCurrentlyAuthorized) {
         // Deauthorize - immediate action
-        const response = await fetch(`${import.meta.env.VITE_BASE_URL}/accountant/remove-auth`, {
-          method: 'DELETE',
-          headers: {
-            'Authorization': token,
-            'Content-Type': 'application/json'
-          },
-          credentials: 'include',
-          body: JSON.stringify({
-            userId: userId,
-            accountId: accountantId
-          })
-        });
+        const response = await fetch(
+          `${import.meta.env.VITE_BASE_URL}/accountant/remove-auth`,
+          {
+            method: "DELETE",
+            headers: {
+              Authorization: token,
+              "Content-Type": "application/json",
+            },
+            credentials: "include",
+            body: JSON.stringify({
+              userId: userId,
+              accountId: accountantId,
+            }),
+          }
+        );
 
         const data = await response.json();
 
         if (!response.ok) {
-          throw new Error(data.error || 'Failed to remove authorization');
+          throw new Error(data.error || "Failed to remove authorization");
         }
 
         // Update the local state
         setAccountants(
           accountants.map((accountant) =>
-            accountant.id === accountantId ? { ...accountant, status: 'unauthorized' } : accountant
+            accountant.id === accountantId
+              ? { ...accountant, status: "unauthorized" }
+              : accountant
           )
         );
 
         toast.success("Successfully removed authorization");
       } else {
         // Request authorization (pending)
-        const response = await fetch(`${import.meta.env.VITE_BASE_URL}/accountant/auth`, {
-          method: 'POST',
-          headers: {
-            'Authorization': token,
-            'Content-Type': 'application/json'
-          },
-          credentials: 'include',
-          body: JSON.stringify({
-            userId: userId,
-            accountId: accountantId,
-            status: 'pending'
-          })
-        });
+        const response = await fetch(
+          `${import.meta.env.VITE_BASE_URL}/accountant/auth`,
+          {
+            method: "POST",
+            headers: {
+              Authorization: token,
+              "Content-Type": "application/json",
+            },
+            credentials: "include",
+            body: JSON.stringify({
+              userId: userId,
+              accountId: accountantId,
+              status: "pending",
+            }),
+          }
+        );
 
         const data = await response.json();
 
         if (!response.ok) {
-          throw new Error(data.error || 'Failed to request authorization');
+          throw new Error(data.error || "Failed to request authorization");
         }
 
         // Update the local state to show pending status
         setAccountants(
           accountants.map((accountant) =>
-            accountant.id === accountantId ? { ...accountant, status: 'pending' } : accountant
+            accountant.id === accountantId
+              ? { ...accountant, status: "pending" }
+              : accountant
           )
         );
 
-        toast.success("Authorization request sent. Waiting for accountant approval.");
+        toast.success(
+          "Authorization request sent. Waiting for accountant approval."
+        );
       }
 
       // Update modal state if needed
       if (selectedAccountant && selectedAccountant.id === accountantId) {
         setSelectedAccountant({
           ...selectedAccountant,
-          status: isCurrentlyAuthorized ? 'unauthorized' : 'pending'
+          status: isCurrentlyAuthorized ? "unauthorized" : "pending",
         });
       }
     } catch (err) {
       console.error("Authorization failed:", err);
-      toast.error(err.message || "Failed to update authorization. Please try again.");
+      toast.error(
+        err.message || "Failed to update authorization. Please try again."
+      );
     }
   };
 
@@ -164,31 +190,36 @@ export default function AccountantPage() {
       const decoded = jwtDecode(token);
       const userId = decoded.id;
 
-      const response = await fetch(`${import.meta.env.VITE_BASE_URL}/user/accountants/${userId}`, {
-        method: 'GET',
-        headers: {
-          'Authorization': token,
-          'Content-Type': 'application/json'
-        },
-        credentials: 'include'
-      });
+      const response = await fetch(
+        `${import.meta.env.VITE_BASE_URL}/user/accountants/${userId}`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: token,
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+        }
+      );
 
       if (!response.ok) {
-        throw new Error('Failed to fetch authorization status');
+        throw new Error("Failed to fetch authorization status");
       }
 
       const data = await response.json();
-      
+
       // Update the accountants state with the latest authorization status
-      setAccountants(prevAccountants => 
-        prevAccountants.map(accountant => {
-          const authData = data.find(auth => auth.accountId === accountant.id);
+      setAccountants((prevAccountants) =>
+        prevAccountants.map((accountant) => {
+          const authData = data.find(
+            (auth) => auth.accountId === accountant.id
+          );
           if (!authData) {
             return accountant; // Keep the existing status if no data found
           }
           return {
             ...accountant,
-            status: authData.status || accountant.status 
+            status: authData.status || accountant.status,
           };
         })
       );
@@ -203,8 +234,8 @@ export default function AccountantPage() {
   }, []);
 
   const renderActionButton = (accountant) => {
-    const isPending = accountant.status === 'pending';
-    const isAuthorized = accountant.status === 'authorized';
+    const isPending = accountant.status === "pending";
+    const isAuthorized = accountant.status === "authorized";
 
     if (isPending) {
       return (
@@ -234,16 +265,36 @@ export default function AccountantPage() {
   };
   const getStatusBadge = (status) => {
     switch (status) {
-      case 'authorized':
-        return <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">Authorized</span>;
-      case 'pending':
-        return <span className="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">Pending</span>;
-      case 'unauthorized':
-        return <span className="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">Unauthorized</span>;
-      case 'rejected':
-        return <span className="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">Rejected</span>;
+      case "authorized":
+        return (
+          <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+            Authorized
+          </span>
+        );
+      case "pending":
+        return (
+          <span className="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
+            Pending
+          </span>
+        );
+      case "unauthorized":
+        return (
+          <span className="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
+            Unauthorized
+          </span>
+        );
+      case "rejected":
+        return (
+          <span className="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
+            Rejected
+          </span>
+        );
       default:
-        return <span className="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">Unauthorized</span>;
+        return (
+          <span className="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
+            Unauthorized
+          </span>
+        );
     }
   };
 
@@ -321,12 +372,13 @@ export default function AccountantPage() {
                   <th key={header.field} className="px-4 py-3 hover:bg-gray-50">
                     <div className="flex items-center gap-1">
                       {header.label}
-                      {header.field !== "actions" && header.field !== "status" && (
-                        <ArrowUpDown 
-                          className="w-4 h-4 cursor-pointer" 
-                          onClick={() => handleSort(header.field)} 
-                        />
-                      )}
+                      {header.field !== "actions" &&
+                        header.field !== "status" && (
+                          <ArrowUpDown
+                            className="w-4 h-4 cursor-pointer"
+                            onClick={() => handleSort(header.field)}
+                          />
+                        )}
                     </div>
                   </th>
                 ))}
@@ -335,18 +387,34 @@ export default function AccountantPage() {
             <tbody className="divide-y divide-gray-200">
               {sortedAccountants.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-6 text-center text-gray-500">
+                  <td
+                    colSpan={6}
+                    className="px-4 py-6 text-center text-gray-500"
+                  >
                     No accountants found
                   </td>
                 </tr>
               ) : (
                 sortedAccountants.map((accountant) => (
-                  <tr key={accountant.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-4 py-3 text-sm text-gray-900">{accountant.accountantId}</td>
-                    <td className="px-4 py-3 text-sm text-gray-900">{accountant.name}</td>
-                    <td className="px-4 py-3 text-sm text-gray-900">{accountant.email}</td>
-                    <td className="px-4 py-3 text-sm text-gray-900">{accountant.address}</td>
-                    <td className="px-4 py-3 text-sm">{getStatusBadge(accountant.status)}</td>
+                  <tr
+                    key={accountant.id}
+                    className="hover:bg-gray-50 transition-colors"
+                  >
+                    <td className="px-4 py-3 text-sm text-gray-900">
+                      {accountant.accountantId}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-900">
+                      {accountant.name}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-900">
+                      {accountant.email}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-900">
+                      {accountant.address}
+                    </td>
+                    <td className="px-4 py-3 text-sm">
+                      {getStatusBadge(accountant.status)}
+                    </td>
                     <td className="px-4 py-3 text-sm">
                       <div className="flex gap-2">
                         {renderActionButton(accountant)}
@@ -371,8 +439,15 @@ export default function AccountantPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="w-full max-w-md bg-white p-6 rounded-lg shadow-xl border border-gray-200">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-semibold text-gray-900">Accountant Details</h3>
-              <button onClick={closeModal} className="text-gray-500 hover:text-red-500">✕</button>
+              <h3 className="text-xl font-semibold text-gray-900">
+                Accountant Details
+              </h3>
+              <button
+                onClick={closeModal}
+                className="text-gray-500 hover:text-red-500"
+              >
+                ✕
+              </button>
             </div>
 
             <div className="space-y-4">
@@ -385,37 +460,45 @@ export default function AccountantPage() {
 
               <div className="border-b pb-2">
                 <p className="text-gray-500">Name</p>
-                <p className="font-medium text-black/60">{selectedAccountant.name}</p>
+                <p className="font-medium text-black/60">
+                  {selectedAccountant.name}
+                </p>
               </div>
 
               <div className="border-b pb-2">
                 <p className="text-gray-500">Email</p>
-                <p className="font-medium text-black/60">{selectedAccountant.email}</p>
+                <p className="font-medium text-black/60">
+                  {selectedAccountant.email}
+                </p>
               </div>
 
               <div className="border-b pb-2">
                 <p className="text-gray-500">Address</p>
-                <p className="font-medium text-black/60">{selectedAccountant.address}</p>
+                <p className="font-medium text-black/60">
+                  {selectedAccountant.address}
+                </p>
               </div>
 
               <div className="border-b pb-2">
                 <p className="text-gray-500">Status</p>
-                <p className={`font-medium ${
-                  selectedAccountant.status === 'authorized' 
-                    ? "text-green-600" 
-                    : selectedAccountant.status === 'pending'
+                <p
+                  className={`font-medium ${
+                    selectedAccountant.status === "authorized"
+                      ? "text-green-600"
+                      : selectedAccountant.status === "pending"
                       ? "text-yellow-600"
-                      : selectedAccountant.status === 'rejected'
-                        ? "text-red-600"
-                        : "text-gray-600"
-                }`}>
-                  {selectedAccountant.status === 'authorized' 
-                    ? "Authorized" 
-                    : selectedAccountant.status === 'pending'
-                      ? "Pending"
-                      : selectedAccountant.status === 'rejected'
-                        ? "Rejected"
-                        : "Unauthorized"}
+                      : selectedAccountant.status === "rejected"
+                      ? "text-red-600"
+                      : "text-gray-600"
+                  }`}
+                >
+                  {selectedAccountant.status === "authorized"
+                    ? "Authorized"
+                    : selectedAccountant.status === "pending"
+                    ? "Pending"
+                    : selectedAccountant.status === "rejected"
+                    ? "Rejected"
+                    : "Unauthorized"}
                 </p>
               </div>
             </div>
@@ -427,16 +510,18 @@ export default function AccountantPage() {
               >
                 Close
               </button>
-              {selectedAccountant.status !== 'pending' && (
+              {selectedAccountant.status !== "pending" && (
                 <button
                   onClick={() => handleAuthorize(selectedAccountant.id)}
                   className={`px-4 py-2 text-white rounded ${
-                    selectedAccountant.status === 'authorized' 
-                      ? "bg-red-600 hover:bg-red-700" 
+                    selectedAccountant.status === "authorized"
+                      ? "bg-red-600 hover:bg-red-700"
                       : "bg-green-600 hover:bg-green-700"
                   }`}
                 >
-                  {selectedAccountant.status === 'authorized' ? "Revoke Access" : "Request Authorization"}
+                  {selectedAccountant.status === "authorized"
+                    ? "Revoke Access"
+                    : "Request Authorization"}
                 </button>
               )}
             </div>

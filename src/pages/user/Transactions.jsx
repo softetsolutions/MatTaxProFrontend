@@ -1,11 +1,15 @@
 import { useState, useEffect, useRef } from "react";
-import { ArrowUpDown, Edit, Trash2, ChevronDown, X } from "lucide-react";
+import { ArrowUpDown, Edit, Trash2, ChevronDown, X, Logs } from "lucide-react";
 import { jwtDecode } from "jwt-decode";
 // import { VendorList } from "../../utils/constant";
 // import axios from "axios";
 import { toast } from "react-toastify";
+import { useNavigate } from "react-router-dom";
+import { handleUnauthoriz } from "../../utils/helperFunction";
+import { fetchAuthorizedUsers } from "../../utils/authorizedUsers";
+import { fetchTransactions, createTransaction, updateTransaction, deleteTransaction } from "../../utils/transactionsApi";
 
-export default function TransactionsPage() {
+export default function TransactionsPage({setIsTransasctionLog}) {
   const [sortField, setSortField] = useState("date");
   const [sortDirection, setSortDirection] = useState("asc");
   const [showModal, setShowModal] = useState(false);
@@ -20,73 +24,67 @@ export default function TransactionsPage() {
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [userId, setUserId] = useState(null);
   const [refreshTableList, setRefreshTableList] = useState(false);
   const [categorySearch, setCategorySearch] = useState("");
   const [vendorSearch, setVendorSearch] = useState("");
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
   const [showVendorDropdown, setShowVendorDropdown] = useState(false);
-  
+  const [searchQuery] = useState("");
+  const [userRole, setUserRole] = useState(null);
+  const [selectedUserId, setSelectedUserId] = useState(null);
+  const [showUserDropdown, setShowUserDropdown] = useState(false);
+  const [userSearch, setUserSearch] = useState("");
+  const [users, setUsers] = useState([]);
+  const userRef = useRef(null);
+  const navigate = useNavigate();
+
   // dropdown options
-  const categoryOptions = ["Shopping", "Entertainment", "Groceries", "Utilities", "Transport", "Other"];
+  const categoryOptions = [
+    "Shopping",
+    "Entertainment",
+    "Groceries",
+    "Utilities",
+    "Transport",
+    "Other",
+  ];
   const vendorOptions = [
     { id: "5", name: "Dmart" },
     { id: "2", name: "Flipkart" },
     { id: "8", name: "Chadstone Shopping Centre" },
-    { id: "34", name: "Westfield Fountain Gate" }
+    { id: "34", name: "Westfield Fountain Gate" },
   ];
-  
+
   // Refs for dropdowns
   const categoryRef = useRef(null);
   const vendorRef = useRef(null);
 
   useEffect(() => {
-    const fetchTransactions = async () => {
+    const fetchTransactionData = async () => {
       try {
-        const userId = jwtDecode(localStorage.getItem("userToken")).id;
-
-        setUserId(userId);
-        let response = await fetch(
-          `${import.meta.env.VITE_BASE_URL}/transaction?userId=${userId}`,
-          {
-            method: "GET",
-            credentials: "include",
-            headers: {
-              "Content-Type": "application/json",
-            },
-          }
-        );
-        if (response.status !== 200) {
-          throw new Error("Error logging in");
-        }
-        response = await response.json();
-        setTransactions(response);
-
-        let transactionLogs = await fetch(
-          `${
-            import.meta.env.VITE_BASE_URL
-          }/transaction/transactionLog?userId=${userId}&transactionId=${64}`,
-          {
-            method: "GET",
-            credentials: "include",
-            headers: {
-              "Content-Type": "application/json",
-            },
-          }
-        );
-        console.log("transactionLogs", transactionLogs);
-
-        // setError(null);
+        setLoading(true);
+        setError(null);
+        const data = await fetchTransactions(selectedUserId);
+        setTransactions(data);
       } catch (err) {
-        setError("Failed to fetch transactions. Please try again later.");
+        setError(err.message || "Failed to fetch transactions");
         console.error("API Error:", err);
+        if (err.message.includes("Unauthorized")) {
+          handleUnauthoriz(navigate);
+        }
       } finally {
         setLoading(false);
       }
     };
-    fetchTransactions();
-  }, [refreshTableList]);
-  
+
+    fetchTransactionData();
+  }, [refreshTableList, selectedUserId, navigate]);
+
+  useEffect(() => {
+    const token = localStorage.getItem("userToken");
+    const decoded = jwtDecode(token);
+    setUserRole(decoded.role);
+  }, []);
+
   // Handle clicks outside of dropdowns
   useEffect(() => {
     function handleClickOutside(event) {
@@ -97,7 +95,7 @@ export default function TransactionsPage() {
         setShowVendorDropdown(false);
       }
     }
-    
+
     document.addEventListener("mousedown", handleClickOutside);
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
@@ -145,59 +143,40 @@ export default function TransactionsPage() {
       if (editingId) {
         // Update existing transaction
         const transactionData = {
-          transactionId: editingId,
           newAmount: formData.amount || null,
           newCategory: formData.category || null,
           newType: formData.type || null,
-          updatedByUserId: userId,
         };
 
         await toast.promise(
-          fetch(
-            `${import.meta.env.VITE_BASE_URL}/transaction/update?userId=${userId}`,
-            {
-              method: "POST",
-              credentials: "include",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({ ...transactionData }),
-            }
-          ),
+          updateTransaction(editingId, transactionData, selectedUserId),
           {
             pending: "Updating transaction...",
             success: "Transaction updated successfully 👌",
-            error: "Failed to update transaction 🤯"
+            error: "Failed to update transaction 🤯",
           }
         );
-
       } else {
         // Create new transaction
+        const token = localStorage.getItem("userToken");
+        const decoded = jwtDecode(token);
+        const userId = decoded.id;
+
         const transactionData = {
           amount: parseFloat(formData.amount),
           category: formData.category,
           type: formData.type,
           vendorId: formData.vendor,
-          userId: userId,
           isdeleted: false,
+          userid: userRole === "accountant" ? selectedUserId : userId
         };
 
         await toast.promise(
-          fetch(
-            `${import.meta.env.VITE_BASE_URL}/transaction/?userId=${userId}`,
-            {
-              method: "POST",
-              credentials: "include",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({ ...transactionData }),
-            }
-          ),
+          createTransaction(transactionData, selectedUserId),
           {
             pending: "Creating transaction...",
             success: "Transaction created successfully 👌",
-            error: "Failed to create transaction 🤯"
+            error: "Failed to create transaction 🤯",
           }
         );
       }
@@ -229,53 +208,35 @@ export default function TransactionsPage() {
 
   const handleDelete = async (id) => {
     try {
-      const res = await toast.promise(
-        fetch(
-          `${
-            import.meta.env.VITE_BASE_URL
-          }/transaction/?userId=${userId}&transactionId=${id}`,
-          {
-            method: "DELETE",
-            credentials: "include", // Required to send HttpOnly cookie
-            headers: {
-              "Content-Type": "application/json",
-            },
-          }
-        ),
+      await toast.promise(
+        deleteTransaction(id, selectedUserId),
         {
           pending: "Deleting Transaction",
           success: "Successfully Deleted Transaction 👌",
           error: "Got Error Deleting transaction, Try again 🤯",
         }
       );
-
-      if (res.status !== 200) {
-        throw new Error("Got error in api");
-      }
-
-      // toast.success("Transaction moved to bin");
       setRefreshTableList((prev) => !prev);
     } catch (e) {
       console.error(e);
-      // toast.error("Problem in deleting transaction. Try again");
     }
   };
-  
+
   // Filter functions dropdowns
-  const filteredCategories = categoryOptions.filter(category => 
+  const filteredCategories = categoryOptions.filter((category) =>
     category.toLowerCase().includes(categorySearch.toLowerCase())
   );
-  
-  const filteredVendors = vendorOptions.filter(vendor => 
+
+  const filteredVendors = vendorOptions.filter((vendor) =>
     vendor.name.toLowerCase().includes(vendorSearch.toLowerCase())
   );
 
   const handleSelect = (type, value) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [type]: type === 'vendor' ? value.id : value
+      [type]: type === "vendor" ? value.id : value,
     }));
-    if (type === 'category') {
+    if (type === "category") {
       setCategorySearch("");
       setShowCategoryDropdown(false);
     } else {
@@ -294,6 +255,48 @@ export default function TransactionsPage() {
     }
     return String(a[sortField]).localeCompare(String(b[sortField])) * modifier;
   });
+
+  const filteredTransactions = sortedTransactions.filter((transaction) => {
+    if (!searchQuery) return true;
+    const query = searchQuery.toLowerCase();
+    return (
+      transaction.category?.toLowerCase().includes(query) ||
+      transaction.type?.toLowerCase().includes(query) ||
+      transaction.vendorid?.toLowerCase().includes(query) ||
+      transaction.amount?.toLowerCase().includes(query) ||
+      transaction.created_at?.toLowerCase().includes(query)
+    );
+  });
+
+  // Filter users based on search
+  const filteredUsers = users.filter((user) =>
+    `${user.fname} ${user.lname}`
+      .toLowerCase()
+      .includes(userSearch.toLowerCase())
+  );
+
+  // to get authorized users
+  const fetchAuthorizedUsersList = async () => {
+    try {
+      const data = await fetchAuthorizedUsers();
+      // Transform the data to match the expected format
+      const transformedUsers = data.map((user) => ({
+        id: user.userid,
+        fname: user.fname,
+        lname: user.lname,
+      }));
+      setUsers(transformedUsers);
+    } catch (err) {
+      console.error("Error fetching authorized users:", err);
+      toast.error(err.message || "Failed to fetch authorized users");
+    }
+  };
+
+  useEffect(() => {
+    if (userRole === "accountant") {
+      fetchAuthorizedUsersList();
+    }
+  }, [userRole]);
 
   if (loading) {
     return (
@@ -326,107 +329,198 @@ export default function TransactionsPage() {
             View and manage your transactions
           </p>
         </div>
-        <button
-          onClick={() => {
-            setEditingId(null);
-            setShowModal(true);
-          }}
-          className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md transition-colors hover:cursor-pointer"
-        >
-          Add Transaction
-        </button>
+        <div className="flex items-center gap-4">
+          {userRole === "accountant" && (
+            <div className="relative" ref={userRef}>
+              <div
+                className="flex items-center w-64 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-black cursor-pointer"
+                onClick={() => setShowUserDropdown(!showUserDropdown)}
+              >
+                <span className="flex-grow">
+                  {selectedUserId
+                    ? users.find((u) => u.id === selectedUserId)?.fname +
+                      " " +
+                      users.find((u) => u.id === selectedUserId)?.lname
+                    : "Select a user"}
+                </span>
+                <ChevronDown className="w-4 h-4 text-gray-400" />
+              </div>
+
+              {showUserDropdown && (
+                <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded shadow-lg">
+                  <div className="p-2 border-b">
+                    <div className="flex items-center border rounded bg-gray-50 text-black">
+                      <input
+                        type="text"
+                        value={userSearch}
+                        onChange={(e) => setUserSearch(e.target.value)}
+                        className="w-full p-2 bg-transparent focus:outline-none text-sm"
+                        placeholder="Search users..."
+                        autoFocus
+                      />
+                      {userSearch && (
+                        <button
+                          onClick={() => setUserSearch("")}
+                          className="mr-2"
+                        >
+                          <X className="w-4 h-4 text-gray-400" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  <div className="max-h-60 overflow-y-auto">
+                    {filteredUsers.length > 0 ? (
+                      filteredUsers.map((user) => (
+                        <div
+                          key={user.id}
+                          onClick={() => {
+                            setSelectedUserId(user.id);
+                            setShowUserDropdown(false);
+                            setUserSearch("");
+                          }}
+                          className="px-4 py-2 hover:bg-blue-50 cursor-pointer text-black"
+                        >
+                          {user.fname} {user.lname}
+                        </div>
+                      ))
+                    ) : (
+                      <div className="p-2 text-gray-500 text-center">
+                        No users found
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {userRole !== "accountant" ||
+          (userRole === "accountant" && selectedUserId) ? (
+            <button
+              onClick={() => {
+                setEditingId(null);
+                setShowModal(true);
+              }}
+              className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md transition-colors hover:cursor-pointer"
+            >
+              Add Transaction
+            </button>
+          ) : null}
+        </div>
       </div>
 
       <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="text-left text-sm font-medium text-gray-500 border-b border-gray-200">
-                {[
-                  { field: "created_at", label: "Date" },
-                  { field: "amount", label: "Amount" },
-                  { field: "category", label: "Category" },
-                  { field: "type", label: "Type" },
-                  { field: "vendorid", label: "Vendor ID" },
-                  { field: "actions", label: "Actions" },
-                ].map((header) => (
-                  <th key={header.field} className="px-4 py-3 hover:bg-gray-50">
-                    <div className="flex items-center gap-1">
-                      {header.label}
-                      {header.field !== "actions" && (
-                        <>
-                          <ArrowUpDown
-                            className="w-4 h-4 cursor-pointer"
-                            onClick={() => handleSort(header.field)}
-                          />
-                          {sortField === header.field && (
-                            <span className="text-xs">
-                              ({sortDirection === "asc" ? "↑" : "↓"})
-                            </span>
-                          )}
-                        </>
-                      )}
-                    </div>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {sortedTransactions.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan="6"
-                    className="px-4 py-6 text-center text-gray-500"
-                  >
-                    No transactions found
-                  </td>
-                </tr>
-              ) : (
-                sortedTransactions.map((txn) => (
-                  <tr
-                    key={txn.id}
-                    className="hover:bg-gray-50 transition-colors"
-                  >
-                    <td className="px-4 py-3 text-sm text-gray-900">
-                      {txn.created_at}
-                    </td>
-                    <td className="px-4 py-3 text-sm font-medium text-gray-900">
-                      {txn.amount}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-900">
-                      {txn.category}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-900 capitalize">
-                      {txn.type}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-900">
-                      {" "}
-                      {txn.vendorid}
-                    </td>
-                    <td className="px-4 py-3 text-sm">
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => handleEdit(txn.id)}
-                          className="p-1 text-blue-600 hover:text-blue-800 rounded hover:bg-blue-50"
-                          title="Edit"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(txn.id)}
-                          className="p-1 text-red-600 hover:text-red-800 rounded hover:bg-red-50"
-                          title="Delete"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+        {userRole === "accountant" && !selectedUserId ? (
+          <div className="flex flex-col items-center justify-center py-12">
+            <div className="text-gray-500 text-lg mb-4">
+              Please select a user to view their transactions
+            </div>
+            <div className="text-gray-400 text-sm">
+              Click on the user dropdown above to select a user
+            </div>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="text-left text-sm font-medium text-gray-500 border-b border-gray-200">
+                  {[
+                    { field: "created_at", label: "Date" },
+                    { field: "amount", label: "Amount" },
+                    { field: "category", label: "Category" },
+                    { field: "type", label: "Type" },
+                    { field: "vendorid", label: "Vendor ID" },
+                    { field: "actions", label: "Actions" },
+                  ].map((header) => (
+                    <th
+                      key={header.field}
+                      className="px-4 py-3 hover:bg-gray-50"
+                    >
+                      <div className="flex items-center gap-1">
+                        {header.label}
+                        {header.field !== "actions" && (
+                          <>
+                            <ArrowUpDown
+                              className="w-4 h-4 cursor-pointer"
+                              onClick={() => handleSort(header.field)}
+                            />
+                            {sortField === header.field && (
+                              <span className="text-xs">
+                                ({sortDirection === "asc" ? "↑" : "↓"})
+                              </span>
+                            )}
+                          </>
+                        )}
                       </div>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {filteredTransactions.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan="6"
+                      className="px-4 py-6 text-center text-gray-500"
+                    >
+                      {searchQuery
+                        ? "No matching transactions found"
+                        : "No transactions found"}
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                ) : (
+                  filteredTransactions.map((txn) => (
+                    <tr
+                      key={txn.id}
+                      className="hover:bg-gray-50 transition-colors"
+                    >
+                      <td className="px-4 py-3 text-sm text-gray-900">
+                        {txn.created_at}
+                      </td>
+                      <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                        {txn.amount}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-900">
+                        {txn.category}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-900 capitalize">
+                        {txn.type}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-900">
+                        {txn.vendorid}
+                      </td>
+                      <td className="px-4 py-3 text-sm">
+                        <div className="flex gap-2">
+                        <button
+                          onClick={() => setIsTransasctionLog(txn.id)}
+                          className="p-1 text-blue-600 hover:text-blue-800 rounded hover:bg-blue-50"
+                          title="Log"
+                        >
+                          <Logs className="w-4 h-4" />
+                        </button>
+                          <button
+                            onClick={() => handleEdit(txn.id)}
+                            className="p-1 text-blue-600 hover:text-blue-800 rounded hover:bg-blue-50"
+                            title="Edit"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(txn.id)}
+                            className="p-1 text-red-600 hover:text-red-800 rounded hover:bg-red-50"
+                            title="Delete"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {showModal && (
@@ -490,14 +584,18 @@ export default function TransactionsPage() {
                     Category
                   </label>
                   <div className="relative">
-                    <div className="flex items-center w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer bg-white"
-                         onClick={() => setShowCategoryDropdown(!showCategoryDropdown)}>
+                    <div
+                      className="flex items-center w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer bg-white"
+                      onClick={() =>
+                        setShowCategoryDropdown(!showCategoryDropdown)
+                      }
+                    >
                       <span className="flex-grow text-gray-700">
                         {formData.category || "Select a category"}
                       </span>
                       <ChevronDown className="w-4 h-4 text-gray-400" />
                     </div>
-                    
+
                     {showCategoryDropdown && (
                       <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded shadow-lg">
                         <div className="p-2 border-b">
@@ -505,13 +603,18 @@ export default function TransactionsPage() {
                             <input
                               type="text"
                               value={categorySearch}
-                              onChange={(e) => setCategorySearch(e.target.value)}
+                              onChange={(e) =>
+                                setCategorySearch(e.target.value)
+                              }
                               className="w-full p-2 bg-transparent focus:outline-none text-sm"
                               placeholder="Search categories..."
                               autoFocus
                             />
                             {categorySearch && (
-                              <button onClick={() => setCategorySearch("")} className="mr-2">
+                              <button
+                                onClick={() => setCategorySearch("")}
+                                className="mr-2"
+                              >
                                 <X className="w-4 h-4 text-gray-400" />
                               </button>
                             )}
@@ -522,14 +625,18 @@ export default function TransactionsPage() {
                             filteredCategories.map((category) => (
                               <div
                                 key={category}
-                                onClick={() => handleSelect('category', category)}
+                                onClick={() =>
+                                  handleSelect("category", category)
+                                }
                                 className="px-4 py-2 hover:bg-blue-50 cursor-pointer text-black"
                               >
                                 {category}
                               </div>
                             ))
                           ) : (
-                            <div className="p-2 text-gray-500 text-center">No results found</div>
+                            <div className="p-2 text-gray-500 text-center">
+                              No results found
+                            </div>
                           )}
                         </div>
                       </div>
@@ -545,16 +652,19 @@ export default function TransactionsPage() {
                     Choose Vendor
                   </label>
                   <div className="relative">
-                    <div className="flex items-center w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer bg-white"
-                         onClick={() => setShowVendorDropdown(!showVendorDropdown)}>
+                    <div
+                      className="flex items-center w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer bg-white"
+                      onClick={() => setShowVendorDropdown(!showVendorDropdown)}
+                    >
                       <span className="flex-grow text-gray-700">
-                        {formData.vendor ? 
-                          vendorOptions.find(v => v.id === formData.vendor)?.name || formData.vendor : 
-                          "Select a vendor"}
+                        {formData.vendor
+                          ? vendorOptions.find((v) => v.id === formData.vendor)
+                              ?.name || formData.vendor
+                          : "Select a vendor"}
                       </span>
                       <ChevronDown className="w-4 h-4 text-gray-400" />
                     </div>
-                    
+
                     {showVendorDropdown && (
                       <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded shadow-lg">
                         <div className="p-2 border-b">
@@ -568,7 +678,10 @@ export default function TransactionsPage() {
                               autoFocus
                             />
                             {vendorSearch && (
-                              <button onClick={() => setVendorSearch("")} className="mr-2">
+                              <button
+                                onClick={() => setVendorSearch("")}
+                                className="mr-2"
+                              >
                                 <X className="w-4 h-4 text-gray-400" />
                               </button>
                             )}
@@ -579,14 +692,16 @@ export default function TransactionsPage() {
                             filteredVendors.map((vendor) => (
                               <div
                                 key={vendor.id}
-                                onClick={() => handleSelect('vendor', vendor)}
+                                onClick={() => handleSelect("vendor", vendor)}
                                 className="px-4 py-2 hover:bg-blue-50 cursor-pointer"
                               >
                                 {vendor.name}
                               </div>
                             ))
                           ) : (
-                            <div className="p-2 text-gray-500 text-center">No results found</div>
+                            <div className="p-2 text-gray-500 text-center">
+                              No results found
+                            </div>
                           )}
                         </div>
                       </div>
