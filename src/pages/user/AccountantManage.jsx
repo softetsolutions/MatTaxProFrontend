@@ -2,6 +2,7 @@ import { useState, useEffect } from "react"
 import { ArrowUpDown, UserCheck, Info, Clock } from "lucide-react"
 import { toast } from 'react-toastify';
 import { jwtDecode } from "jwt-decode";
+import { handleUnauthoriz } from "../../utils/helperFunction";
 
 export default function AccountantPage() {
   const [accountants, setAccountants] = useState([]);
@@ -29,9 +30,12 @@ export default function AccountantPage() {
           credentials: 'include'
         });
 
-        if (!response.ok) {
+        if (response.status !== 200) {
           const errorData = await response.json();
-          throw new Error(errorData.error || 'Failed to fetch accountants');
+          if (response.status === 401) {
+            handleUnauthoriz(navigate);
+          }
+          throw new Error(errorData.error || "Failed to fetch accountants");
         }
 
         const data = await response.json();
@@ -39,7 +43,7 @@ export default function AccountantPage() {
         // Transform the data to match our component's structure
         const transformedData = data.map(accountant => ({
           id: accountant.id,
-          accountantId: `ACC${String(accountant.id).padStart(3, '0')}`,
+          accountantId: `ACC${String(accountant.id).padStart(3, "0")}`,
           name: `${accountant.fname} ${accountant.lname}`,
           email: accountant.email,
           address: accountant.address || 'N/A',
@@ -292,8 +296,12 @@ export default function AccountantPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Accountant Management</h1>
-          <p className="text-sm text-gray-500">View and manage accountant access</p>
+          <h1 className="text-2xl font-bold text-gray-900">
+            Accountant Management
+          </h1>
+          <p className="text-sm text-gray-500">
+            View and manage accountant access
+          </p>
         </div>
       </div>
 
@@ -370,7 +378,9 @@ export default function AccountantPage() {
             <div className="space-y-4">
               <div className="pb-2">
                 <p className="text-sm text-gray-500">Accountant ID</p>
-                <p className="font-medium text-black/60">{selectedAccountant.accountantId}</p>
+                <p className="font-medium text-black/60">
+                  {selectedAccountant.accountantId}
+                </p>
               </div>
 
               <div className="border-b pb-2">
