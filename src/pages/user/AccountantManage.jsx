@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react"
-import { ArrowUpDown, UserCheck, Info } from "lucide-react"
-import { toast } from 'react-toastify';
+import { useState, useEffect } from "react";
+import { ArrowUpDown, UserCheck, Info } from "lucide-react";
+import { toast } from "react-toastify";
 import { jwtDecode } from "jwt-decode";
+import { handleUnauthoriz } from "../../utils/helperFunction";
 
 export default function AccountantPage() {
   const [accountants, setAccountants] = useState([]);
@@ -17,27 +18,33 @@ export default function AccountantPage() {
       try {
         const token = localStorage.getItem("userToken");
 
-        const response = await fetch(`${import.meta.env.VITE_BASE_URL}/user/accountants`, {
-          method: 'GET',
-          headers: {
-            'Authorization': token,
-            'Content-Type': 'application/json'
-          },
-          credentials: 'include'
-        });
+        const response = await fetch(
+          `${import.meta.env.VITE_BASE_URL}/user/accountants`,
+          {
+            method: "GET",
+            headers: {
+              // Authorization: token,
+              "Content-Type": "application/json",
+            },
+            credentials: "include",
+          }
+        );
 
-        if (!response.ok) {
+        if (response.status !== 200) {
           const errorData = await response.json();
-          throw new Error(errorData.error || 'Failed to fetch accountants');
+          if (response.status === 401) {
+            handleUnauthoriz(navigate);
+          }
+          throw new Error(errorData.error || "Failed to fetch accountants");
         }
 
         const data = await response.json();
-        
-        const transformedData = data.map(accountant => ({
+
+        const transformedData = data.map((accountant) => ({
           id: accountant.id,
-          accountantId: `ACC${String(accountant.id).padStart(3, '0')}`,
+          accountantId: `ACC${String(accountant.id).padStart(3, "0")}`,
           name: `${accountant.fname} ${accountant.lname}`,
-          isAuthorized: false, 
+          isAuthorized: false,
         }));
 
         setAccountants(transformedData);
@@ -66,34 +73,46 @@ export default function AccountantPage() {
       const decoded = jwtDecode(token);
       const userId = decoded.id;
 
-      const accountant = accountants.find(acc => acc.id === accountantId);
+      const accountant = accountants.find((acc) => acc.id === accountantId);
       const isCurrentlyAuthorized = accountant.isAuthorized;
 
-      const response = await fetch(`${import.meta.env.VITE_BASE_URL}/accountant/${isCurrentlyAuthorized ? 'remove-auth' : 'auth'}`, {
-        method: isCurrentlyAuthorized ? 'DELETE' : 'POST',
-        headers: {
-          'Authorization': token,
-          'Content-Type': 'application/json'
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          userId: userId,
-          accountId: accountantId
-        })
-      });
+      const response = await fetch(
+        `${import.meta.env.VITE_BASE_URL}/accountant/${
+          isCurrentlyAuthorized ? "remove-auth" : "auth"
+        }`,
+        {
+          method: isCurrentlyAuthorized ? "DELETE" : "POST",
+          headers: {
+            Authorization: token,
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+          body: JSON.stringify({
+            userId: userId,
+            accountId: accountantId,
+          }),
+        }
+      );
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || `Failed to ${isCurrentlyAuthorized ? 'remove' : 'add'} authorization`);
+        throw new Error(
+          data.error ||
+            `Failed to ${
+              isCurrentlyAuthorized ? "remove" : "add"
+            } authorization`
+        );
       }
 
       // Update the local state
       setAccountants(
         accountants.map((accountant) =>
-          accountant.id === accountantId ? { ...accountant, isAuthorized: !isCurrentlyAuthorized } : accountant
+          accountant.id === accountantId
+            ? { ...accountant, isAuthorized: !isCurrentlyAuthorized }
+            : accountant
         )
-      );  
+      );
       if (selectedAccountant && selectedAccountant.id === accountantId) {
         setSelectedAccountant({
           ...selectedAccountant,
@@ -101,13 +120,16 @@ export default function AccountantPage() {
         });
       }
 
-      toast.success(isCurrentlyAuthorized ? 
-        "Successfully removed authorization" : 
-        "Successfully authorized accountant"
+      toast.success(
+        isCurrentlyAuthorized
+          ? "Successfully removed authorization"
+          : "Successfully authorized accountant"
       );
     } catch (err) {
       console.error("Authorization failed:", err);
-      toast.error(err.message || "Failed to update authorization. Please try again.");
+      toast.error(
+        err.message || "Failed to update authorization. Please try again."
+      );
     }
   };
 
@@ -158,8 +180,12 @@ export default function AccountantPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Accountant Management</h1>
-          <p className="text-sm text-gray-500">View and manage accountant access</p>
+          <h1 className="text-2xl font-bold text-gray-900">
+            Accountant Management
+          </h1>
+          <p className="text-sm text-gray-500">
+            View and manage accountant access
+          </p>
         </div>
       </div>
 
@@ -177,14 +203,20 @@ export default function AccountantPage() {
                   <th key={header.field} className="px-4 py-3 hover:bg-gray-50">
                     <div className="flex items-center gap-1">
                       {header.label}
-                      {header.field !== "actions" && header.field !== "status" && (
-                        <>
-                          <ArrowUpDown className="w-4 h-4 cursor-pointer" onClick={() => handleSort(header.field)} />
-                          {sortField === header.field && (
-                            <span className="text-xs">(actions{sortDirection === "asc" ? "↑" : "↓"})</span>
-                          )}
-                        </>
-                      )}
+                      {header.field !== "actions" &&
+                        header.field !== "status" && (
+                          <>
+                            <ArrowUpDown
+                              className="w-4 h-4 cursor-pointer"
+                              onClick={() => handleSort(header.field)}
+                            />
+                            {sortField === header.field && (
+                              <span className="text-xs">
+                                (actions{sortDirection === "asc" ? "↑" : "↓"})
+                              </span>
+                            )}
+                          </>
+                        )}
                     </div>
                   </th>
                 ))}
@@ -193,22 +225,36 @@ export default function AccountantPage() {
             <tbody className="divide-y divide-gray-200">
               {sortedAccountants.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-4 py-6 text-center text-gray-500">
+                  <td
+                    colSpan={5}
+                    className="px-4 py-6 text-center text-gray-500"
+                  >
                     No accountants found
                   </td>
                 </tr>
               ) : (
                 sortedAccountants.map((accountant) => (
-                  <tr key={accountant.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-4 py-3 text-sm text-gray-900">{accountant.accountantId}</td>
-                    <td className="px-4 py-3 text-sm text-gray-900">{accountant.name}</td>
+                  <tr
+                    key={accountant.id}
+                    className="hover:bg-gray-50 transition-colors"
+                  >
+                    <td className="px-4 py-3 text-sm text-gray-900">
+                      {accountant.accountantId}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-900">
+                      {accountant.name}
+                    </td>
                     <td className="px-4 py-3 text-sm">
                       <span
                         className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          accountant.isAuthorized ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+                          accountant.isAuthorized
+                            ? "bg-green-100 text-green-800"
+                            : "bg-red-100 text-red-800"
                         }`}
                       >
-                        {accountant.isAuthorized ? "Authorized" : "Unauthorized"}
+                        {accountant.isAuthorized
+                          ? "Authorized"
+                          : "Unauthorized"}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-sm">
@@ -220,7 +266,11 @@ export default function AccountantPage() {
                               ? "text-red-600 hover:text-red-800 hover:bg-red-50"
                               : "text-green-600 hover:text-green-800 hover:bg-green-50"
                           } rounded`}
-                          title={accountant.isAuthorized ? "Revoke Access" : "Authorize"}
+                          title={
+                            accountant.isAuthorized
+                              ? "Revoke Access"
+                              : "Authorize"
+                          }
                         >
                           <UserCheck className="w-4 h-4 hover:cursor-pointer" />
                         </button>
@@ -245,8 +295,13 @@ export default function AccountantPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="w-full max-w-md bg-white p-6 rounded-lg shadow-xl border border-gray-200 transition-all animate-in fade-in zoom-in-95 duration-300">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-semibold text-gray-900">Accountant Details</h3>
-              <button onClick={closeModal} className="text-gray-500 hover:cursor-pointer hover:text-red-500">
+              <h3 className="text-xl font-semibold text-gray-900">
+                Accountant Details
+              </h3>
+              <button
+                onClick={closeModal}
+                className="text-gray-500 hover:cursor-pointer hover:text-red-500"
+              >
                 ✕
               </button>
             </div>
@@ -254,18 +309,30 @@ export default function AccountantPage() {
             <div className="space-y-4">
               <div className="pb-2 text-gray-500">
                 <p className="text-sm text-gray-500">Accountant ID</p>
-                <p className="font-medium text-black/60">{selectedAccountant.accountantId}</p>
+                <p className="font-medium text-black/60">
+                  {selectedAccountant.accountantId}
+                </p>
               </div>
 
               <div className="border-b pb-2">
                 <p className=" text-gray-500">Name</p>
-                <p className="font-medium text-black/60">{selectedAccountant.name}</p>
+                <p className="font-medium text-black/60">
+                  {selectedAccountant.name}
+                </p>
               </div>
 
               <div className="border-b pb-2">
                 <p className=" text-gray-500">Status</p>
-                <p className={`font-medium ${selectedAccountant.isAuthorized ? "text-green-600" : "text-red-600"}`}>
-                  {selectedAccountant.isAuthorized ? "Authorized" : "Unauthorized"}
+                <p
+                  className={`font-medium ${
+                    selectedAccountant.isAuthorized
+                      ? "text-green-600"
+                      : "text-red-600"
+                  }`}
+                >
+                  {selectedAccountant.isAuthorized
+                    ? "Authorized"
+                    : "Unauthorized"}
                 </p>
               </div>
             </div>
@@ -280,10 +347,14 @@ export default function AccountantPage() {
               <button
                 onClick={() => handleAuthorize(selectedAccountant.id)}
                 className={`px-4 py-2 text-white rounded transition-colors hover:cursor-pointer ${
-                  selectedAccountant.isAuthorized ? "bg-red-600 hover:bg-red-700" : "bg-green-600 hover:bg-green-700"
+                  selectedAccountant.isAuthorized
+                    ? "bg-red-600 hover:bg-red-700"
+                    : "bg-green-600 hover:bg-green-700"
                 }`}
               >
-                {selectedAccountant.isAuthorized ? "Revoke Access" : "Authorize Access"}
+                {selectedAccountant.isAuthorized
+                  ? "Revoke Access"
+                  : "Authorize Access"}
               </button>
             </div>
           </div>

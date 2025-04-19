@@ -1,8 +1,9 @@
 import { Link } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { ArrowUpDown,ArrowRight, User, Clock, FileText } from "lucide-react";
+import { jwtDecode } from "jwt-decode";
 
-export default function TransactionLog() {
+export default function TransactionLog({setIsTransasctionLog, isTransasctionLog}) {
   const [transactionLogs, setTransactionLogs] = useState([]);
   const [sortConfig, setSortConfig] = useState({ key: 'transaction_id', direction: "asc" });
 
@@ -82,18 +83,31 @@ export default function TransactionLog() {
 
   useEffect(() => {
     // First try to get from localStorage
-    const savedLogs = localStorage.getItem("transactionLogs")
-    
-    if (savedLogs) {
-      try {
-        setTransactionLogs(JSON.parse(savedLogs))
-      } catch (error) {
-        console.error("Error parsing saved logs:", error)
-        initializeWithMockData()
+   const fetchData =  async()=>{
+    const user = jwtDecode(localStorage.getItem("userToken")) 
+
+    let response = await fetch(
+      `${import.meta.env.VITE_BASE_URL}/transaction/transactionLog/?userId=${user.id}&transactionId=${isTransasctionLog}`,
+      {
+        method: "GET",
+        headers: {
+          // Authorization: token,
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
       }
-    } else {
-      initializeWithMockData()
-    }
+    );
+
+    response = await response.json()
+
+    setTransactionLogs(response);
+
+    console.log("response",response);
+    
+    
+      // initializeWithMockData()
+  }
+  fetchData()
   }, []);
 
   const initializeWithMockData = () => {
@@ -152,12 +166,12 @@ export default function TransactionLog() {
           </h1>
           <p className="text-sm text-gray-500 mt-1">Audit trail of all transaction modifications</p>
         </div>
-        <Link
-          to="/dashboard/transactions"
+        <button
+          onClick={() => setIsTransasctionLog(null)}
           className="inline-flex items-center px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium rounded-md transition-colors"
         >
           Back to Transactions
-        </Link>
+        </button>
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-100">

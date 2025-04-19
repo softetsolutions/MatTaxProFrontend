@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
-import { ArrowUpDown, Edit, Trash2 } from "lucide-react";
+import { ArrowUpDown, Edit, Logs, Trash2 } from "lucide-react";
 import { jwtDecode } from "jwt-decode";
-import { VendorList } from "../../utils/constant";
-import axios from "axios";
 import { toast } from "react-toastify";
+import { handleUnauthoriz } from "../../utils/helperFunction";
+import { useNavigate } from "react-router-dom";
 
-export default function TransactionsPage() {
+export default function TransactionsPage({setIsTransasctionLog}) {
   const [sortField, setSortField] = useState("date");
   const [sortDirection, setSortDirection] = useState("asc");
   const [showModal, setShowModal] = useState(false);
@@ -22,6 +22,8 @@ export default function TransactionsPage() {
   const [error, setError] = useState(null);
   const [userId, setUserId] = useState(null);
   const [refreshTableList, setRefreshTableList] = useState(false);
+
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchTransactions = async () => {
@@ -40,6 +42,9 @@ export default function TransactionsPage() {
           }
         );
         if (response.status !== 200) {
+          if (response.status === 401) {
+            handleUnauthoriz(navigate);
+          }
           throw new Error("Error logging in");
         }
         response = await response.json();
@@ -358,6 +363,13 @@ export default function TransactionsPage() {
                     </td>
                     <td className="px-4 py-3 text-sm">
                       <div className="flex gap-2">
+                      <button
+                          onClick={() => setIsTransasctionLog(txn.id)}
+                          className="p-1 text-blue-600 hover:text-blue-800 rounded hover:bg-blue-50"
+                          title="Log"
+                        >
+                          <Logs className="w-4 h-4" />
+                        </button>
                         <button
                           onClick={() => handleEdit(txn.id)}
                           className="p-1 text-blue-600 hover:text-blue-800 rounded hover:bg-blue-50"
