@@ -96,10 +96,10 @@ export default function LoginPage() {
     e.preventDefault();
     setError("");
     
-    if (!recaptchaToken) {
-      setError("Please complete the reCAPTCHA verification.");
-      return;
-    }
+    // if (!recaptchaToken) {
+    //   setError("Please complete the reCAPTCHA verification.");
+    //   return;
+    // }
 
     setIsLoading(true);
 
