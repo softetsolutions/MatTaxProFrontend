@@ -1,11 +1,9 @@
-import { jwtDecode } from "jwt-decode"
+import {getAuthInfo} from "./auth"
 
 export const fetchInvitations = async () => {
-  const token = localStorage.getItem("userToken")
-  const decoded = jwtDecode(token)
-  const userId = decoded.id
 
-  const response = await fetch(`${import.meta.env.VITE_BASE_URL}/accountant/getall-invitation/${userId}`, {
+  const {token,userId:accountId} = getAuthInfo();
+  const response = await fetch(`${import.meta.env.VITE_BASE_URL}/accountant/getall-invitation/${accountId}`, {
     method: "GET",
     headers: {
       Authorization: token,
@@ -30,9 +28,7 @@ export const fetchInvitations = async () => {
 }
 
 export const handleApproveInvitation = async (invitationId, invitations) => {
-  const token = localStorage.getItem("userToken")
-  const decoded = jwtDecode(token)
-  const accountId = decoded.id
+  const {token , userId:accountId} = getAuthInfo();
 
   // Get the UserId
   const invitation = invitations.find(inv => inv.id === invitationId)
@@ -63,9 +59,8 @@ export const handleApproveInvitation = async (invitationId, invitations) => {
 }
 
 export const handleRejectInvitation = async (invitationId, invitations) => {
-  const token = localStorage.getItem("userToken")
-  const decoded = jwtDecode(token)
-  const accountId = decoded.id
+
+  const {token,userId:accountId} = getAuthInfo();
   // etting the userId
   const invitation = invitations.find(inv => inv.id === invitationId)
   if (!invitation) {

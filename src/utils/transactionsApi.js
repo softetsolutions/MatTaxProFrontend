@@ -1,21 +1,4 @@
-import { jwtDecode } from "jwt-decode";
-
-const getAuthInfo = () => {
-  const token = localStorage.getItem("userToken");
-  if (!token) {
-    throw new Error("No authentication token found");
-  }
-
-  const decoded = jwtDecode(token);
-  const userId = decoded.id;
-  const role = decoded.role;
-
-  if (!userId) {
-    throw new Error("No user ID found in token");
-  }
-
-  return { token, userId, role };
-};
+import {getAuthInfo} from "./auth";
 
 export const fetchTransactions = async (selectedUserId = null) => {
   try {
