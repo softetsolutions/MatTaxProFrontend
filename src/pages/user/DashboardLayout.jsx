@@ -1,6 +1,6 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
-import { History, LogOut, User, Trash2 } from "lucide-react";
+import { LogOut} from "lucide-react";
 import { routeMapping, iconMapping } from "../../utils/constant";
 import { toast } from "react-toastify";
 
@@ -35,7 +35,7 @@ export default function DashboardLayout() {
           toast.success("Wohha logged out successfully!");
           navigate("/");
         } catch (e) {
-          setError("Please try again.");
+          toast.error("Please try again.");
           console.error(e);
         }
   }

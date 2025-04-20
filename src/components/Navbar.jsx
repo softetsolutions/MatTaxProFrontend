@@ -23,11 +23,20 @@ function Navbar() {
   }
 
   useEffect(()=>{
-    if(localStorage.getItem("userToken") && jwtDecode(localStorage.getItem("userToken")).id){
-      setIsLoggedIn(true);
-    }else{
-      setIsLoggedIn(false);
+    const token = localStorage.getItem("userToken");
+    if (token) {
+      try {
+        const decoded = jwtDecode(token);
+        if (decoded && decoded.id) {
+          setIsLoggedIn(true);
+          return;
+        }
+      } catch (error) {
+        console.error("Invalid token:", error);
+        localStorage.removeItem("userToken");
+      }
     }
+    setIsLoggedIn(false);
   },[])
 
   return (

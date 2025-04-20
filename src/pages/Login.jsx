@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
+import ReCAPTCHA from "react-google-recaptcha";
 import Header from "../components/Header";
 import { toast } from "react-toastify";
 
@@ -71,12 +72,14 @@ const socialProviders = [
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const recaptchaRef = useRef();
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [recaptchaToken, setRecaptchaToken] = useState(null);
   const [socialLoginLoading, setSocialLoginLoading] = useState({
     google: false,
     facebook: false,
@@ -85,13 +88,22 @@ export default function LoginPage() {
 
   const togglePasswordVisibility = () => setShowPassword((prev) => !prev);
 
+  const handleRecaptchaChange = (token) => {
+    setRecaptchaToken(token);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+    
+    if (!recaptchaToken) {
+      setError("Please complete the reCAPTCHA verification.");
+      return;
+    }
+
     setIsLoading(true);
 
     try {
-      // Simulate authentication
       let user = await fetch(
         `${import.meta.env.VITE_BASE_URL}/auth/login`,
         {
@@ -103,6 +115,7 @@ export default function LoginPage() {
           body: JSON.stringify({
             email: email,
             password: password,
+            recaptchaToken: recaptchaToken,
           }),
         }
       );
@@ -118,6 +131,10 @@ export default function LoginPage() {
     } catch (e) {
       setError("Invalid email or password. Please try again.");
       console.error(e);
+      if (recaptchaRef.current) {
+        recaptchaRef.current.reset();
+      }
+      setRecaptchaToken(null);
     } finally {
       setIsLoading(false);
     }
@@ -128,7 +145,6 @@ export default function LoginPage() {
     setError("");
 
     try {
-      // Simulate OAuth login
       await new Promise((resolve) => setTimeout(resolve, 1500));
       console.log(`Logging in with ${provider}`);
       navigate("/dashboard");
@@ -229,6 +245,16 @@ export default function LoginPage() {
                   >
                     Remember me
                   </label>
+                </div>
+
+                {/* reCAPTCHA */}
+                <div className="flex justify-center">
+                  <ReCAPTCHA
+                    ref={recaptchaRef}
+                    sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY}
+                    onChange={handleRecaptchaChange}
+                    theme="dark"
+                  />
                 </div>
 
                 {/* Submit Button */}
