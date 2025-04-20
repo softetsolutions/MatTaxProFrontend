@@ -8,6 +8,7 @@ import { useNavigate } from "react-router-dom";
 import { handleUnauthoriz } from "../../utils/helperFunction";
 import { fetchAuthorizedUsers } from "../../utils/authorizedUsers";
 import { fetchTransactions, createTransaction, updateTransaction, deleteTransaction } from "../../utils/transactionsApi";
+import { fetchAllVendors } from "../../utils/vendorApi";    
 
 export default function TransactionsPage({setIsTransasctionLog}) {
   const [sortField, setSortField] = useState("date");
@@ -35,8 +36,11 @@ export default function TransactionsPage({setIsTransasctionLog}) {
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [userSearch, setUserSearch] = useState("");
   const [users, setUsers] = useState([]);
+  const [vendorOptions, setVendorOptions] = useState([]);
   const userRef = useRef(null);
   const navigate = useNavigate();
+
+  console.log("vendorOptions",vendorOptions);
 
   // dropdown options
   const categoryOptions = [
@@ -47,12 +51,12 @@ export default function TransactionsPage({setIsTransasctionLog}) {
     "Transport",
     "Other",
   ];
-  const vendorOptions = [
-    { id: "5", name: "Dmart" },
-    { id: "2", name: "Flipkart" },
-    { id: "8", name: "Chadstone Shopping Centre" },
-    { id: "34", name: "Westfield Fountain Gate" },
-  ];
+  // const vendorOptions = [
+  //   { id: "5", name: "Dmart" },
+  //   { id: "2", name: "Flipkart" },
+  //   { id: "8", name: "Chadstone Shopping Centre" },
+  //   { id: "34", name: "Westfield Fountain Gate" },
+  // ];
 
   // Refs for dropdowns
   const categoryRef = useRef(null);
@@ -63,8 +67,18 @@ export default function TransactionsPage({setIsTransasctionLog}) {
       try {
         setLoading(true);
         setError(null);
-        const data = await fetchTransactions(selectedUserId);
-        setTransactions(data);
+        const data = await Promise.allSettled([fetchTransactions(selectedUserId), fetchAllVendors()]);
+        // console.log(data);
+        const vendors = data[1].value.reduce((acc,vendor)=>{
+          let vendorData = {
+            id:vendor.id,
+            name:vendor.name
+          }
+          acc.push(vendorData);
+          return acc;
+        },[])
+        setVendorOptions(vendors);
+        setTransactions(data[0].value);
       } catch (err) {
         setError(err.message || "Failed to fetch transactions");
         console.error("API Error:", err);
@@ -429,7 +443,7 @@ export default function TransactionsPage({setIsTransasctionLog}) {
                     { field: "amount", label: "Amount" },
                     { field: "category", label: "Category" },
                     { field: "type", label: "Type" },
-                    { field: "vendorid", label: "Vendor ID" },
+                    { field: "vendorname", label: "Vendor Name" },
                     { field: "actions", label: "Actions" },
                   ].map((header) => (
                     <th
@@ -487,7 +501,7 @@ export default function TransactionsPage({setIsTransasctionLog}) {
                         {txn.type}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-900">
-                        {txn.vendorid}
+                        {txn.vendorname}
                       </td>
                       <td className="px-4 py-3 text-sm">
                         <div className="flex gap-2">
