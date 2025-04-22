@@ -9,6 +9,7 @@ import Users from "./pages/user/Users";
 import Bin from "./pages/user/Bin";
 import Invitation from "./pages/user/Invitation";
 import ProtectRouteComp from "./components/ProtectRouteComp";
+import VerifyEmail from "./pages/VerifyEmail";
 import RenderTransactionOrTransactionLog from "./pages/user/RenderTransactionOrTransactionLog";
 
 function App() {
@@ -19,6 +20,7 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<RoleSelection />} />
         <Route path="/register/:role" element={<UserSignup />} />
+        <Route path="/verifyEmail/:token" element={<VerifyEmail />} />
         {/* user */}
         <Route path="/dashboard" element={<ProtectRouteComp routeName={"dashboard"}><DashboardLayout /></ProtectRouteComp>}>
         {/* /* <Route path="quick-actions" element={<QuickActions />}/> */}
