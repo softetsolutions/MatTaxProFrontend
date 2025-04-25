@@ -1,44 +1,54 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
-import { LogOut} from "lucide-react";
+import { LogOut } from "lucide-react";
 import { routeMapping, iconMapping } from "../../utils/constant";
 import { toast } from "react-toastify";
+import { useState, useEffect } from "react";
+import { fetchAndUpdatePendingInvitationsCount } from "../../utils/invitationHelper";
 
 export default function DashboardLayout() {
   const navigate = useNavigate();
+  const [pendingInvitationsCount, setPendingInvitationsCount] = useState(0);
 
-  const navigation = jwtDecode(localStorage.getItem("userToken")).allowedRoutes.filter((item)=> Object.keys(routeMapping).includes(item));
+  const navigation = jwtDecode(
+    localStorage.getItem("userToken")
+  ).allowedRoutes.filter((item) => Object.keys(routeMapping).includes(item));
 
-  console.log("navigation",navigation)
+  useEffect(() => {
+    fetchAndUpdatePendingInvitationsCount(setPendingInvitationsCount);
+    const interval = setInterval(
+      () => fetchAndUpdatePendingInvitationsCount(setPendingInvitationsCount),
+      30000
+    );
+    return () => clearInterval(interval);
+  }, []);
 
-  const handleLogOut = async()=>{
+  console.log("navigation", navigation);
+
+  const handleLogOut = async () => {
     try {
-          // Simulate authentication
-          let user = await fetch(
-            `${import.meta.env.VITE_BASE_URL}/auth/logout`,
-            {
-              method: "POST",
-              credentials: "include",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-              }),
-            }
-          );
-    
-          if(user.status !== 200){
-            toast.fail("Error logging out");
-            throw new Error("Error logging out");
-          }
-          localStorage.removeItem("userToken");
-          toast.success("Wohha logged out successfully!");
-          navigate("/");
-        } catch (e) {
-          toast.error("Please try again.");
-          console.error(e);
-        }
-  }
+      // Simulate authentication
+      let user = await fetch(`${import.meta.env.VITE_BASE_URL}/auth/logout`, {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({}),
+      });
+
+      if (user.status !== 200) {
+        toast.fail("Error logging out");
+        throw new Error("Error logging out");
+      }
+      localStorage.removeItem("userToken");
+      toast.success("Wohha logged out successfully!");
+      navigate("/");
+    } catch (e) {
+      toast.error("Please try again.");
+      console.error(e);
+    }
+  };
 
   return (
     <div className="flex min-h-screen bg-white">
@@ -55,6 +65,7 @@ export default function DashboardLayout() {
           <nav className="flex-1 px-2 space-y-1 mt-6">
             {navigation.map((item) => {
               const Icon = iconMapping(item);
+              const isInvitation = item === "invitations";
 
               return (
                 <NavLink
@@ -79,14 +90,25 @@ export default function DashboardLayout() {
                     }`;
                   }}
                 >
-                  {Icon && <Icon
-                    className={`mr-3 h-5 w-5 ${
-                      item === "bin"
-                        ? "text-current group-hover:text-current"
-                        : "text-gray-500 group-hover:text-blue-500"
-                    }`}
-                  />}
-                  {routeMapping[item]}
+                  <div className="flex items-center">
+                    <div className="relative w-5 mr-3">
+                      {Icon && (
+                        <Icon
+                          className={`h-5 w-5 ${
+                            item === "bin"
+                              ? "text-current group-hover:text-current"
+                              : "text-gray-500 group-hover:text-blue-500"
+                          }`}
+                        />
+                      )}
+                      {isInvitation && pendingInvitationsCount > 0 && (
+                        <span className="absolute -top-2 -right-2 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-red-500 text-[10px] font-medium text-white px-1">
+                          {pendingInvitationsCount}
+                        </span>
+                      )}
+                    </div>
+                    <span>{routeMapping[item]}</span>
+                  </div>
                 </NavLink>
               );
             })}
@@ -96,7 +118,7 @@ export default function DashboardLayout() {
           <div className="mt-auto">
             <button
               onClick={handleLogOut}
-              className="group flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 rounded-lg w-full transition-colors hover:cursor-pointer "
+              className="group flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 rounded-lg w-full transition-colors hover:cursor-pointer"
             >
               <LogOut className="mr-3 h-5 w-5 text-gray-500 group-hover:text-red-500" />
               Logout
