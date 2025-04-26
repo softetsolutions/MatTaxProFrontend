@@ -4,6 +4,7 @@ import { toast } from "react-toastify";
 import { jwtDecode } from "jwt-decode";
 import { handleUnauthoriz } from "../../utils/helperFunction";
 import { useNavigate } from "react-router-dom";
+import ConfirmationModal from "../../components/ConfirmationModal";
 
 export default function AccountantPage() {
   const [accountants, setAccountants] = useState([]);
@@ -13,6 +14,8 @@ export default function AccountantPage() {
   const [selectedAccountant, setSelectedAccountant] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showConfirmationModal, setShowConfirmationModal] = useState(false);
+  const [accountantToDeauthorize, setAccountantToDeauthorize] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -22,7 +25,6 @@ export default function AccountantPage() {
         const decoded = jwtDecode(token);
         console.log(decoded);
         const userId = decoded.id;
-
         const response = await fetch(
           `${import.meta.env.VITE_BASE_URL}/user/accountants/${userId}`,
           {
@@ -96,85 +98,48 @@ export default function AccountantPage() {
       const isCurrentlyAuthorized = accountant.status === "authorized";
 
       if (isCurrentlyAuthorized) {
-        // Deauthorize - immediate action
-        const response = await fetch(
-          `${import.meta.env.VITE_BASE_URL}/accountant/remove-auth`,
-          {
-            method: "DELETE",
-            headers: {
-              Authorization: token,
-              "Content-Type": "application/json",
-            },
-            credentials: "include",
-            body: JSON.stringify({
-              userId: userId,
-              accountId: accountantId,
-            }),
-          }
-        );
-
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data.error || "Failed to remove authorization");
-        }
-
-        // Update the local state
-        setAccountants(
-          accountants.map((accountant) =>
-            accountant.id === accountantId
-              ? { ...accountant, status: "unauthorized" }
-              : accountant
-          )
-        );
-
-        toast.success("Successfully removed authorization");
-      } else {
-        // Request authorization (pending)
-        const response = await fetch(
-          `${import.meta.env.VITE_BASE_URL}/accountant/auth`,
-          {
-            method: "POST",
-            headers: {
-              Authorization: token,
-              "Content-Type": "application/json",
-            },
-            credentials: "include",
-            body: JSON.stringify({
-              userId: userId,
-              accountId: accountantId,
-              status: "pending",
-            }),
-          }
-        );
-
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data.error || "Failed to request authorization");
-        }
-
-        // Update the local state to show pending status
-        setAccountants(
-          accountants.map((accountant) =>
-            accountant.id === accountantId
-              ? { ...accountant, status: "pending" }
-              : accountant
-          )
-        );
-
-        toast.success(
-          "Authorization request sent. Waiting for accountant approval."
-        );
+        // confirmation modal for deauthorization
+        setAccountantToDeauthorize(accountant);
+        setShowConfirmationModal(true);
+        return;
       }
 
-      // Update modal state if needed
-      if (selectedAccountant && selectedAccountant.id === accountantId) {
-        setSelectedAccountant({
-          ...selectedAccountant,
-          status: isCurrentlyAuthorized ? "unauthorized" : "pending",
-        });
+      // Request authorization
+      const response = await fetch(
+        `${import.meta.env.VITE_BASE_URL}/accountant/auth`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: token,
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+          body: JSON.stringify({
+            userId: userId,
+            accountId: accountantId,
+            status: "pending",
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to request authorization");
       }
+
+      // Update the local state to show pending status
+      setAccountants(
+        accountants.map((accountant) =>
+          accountant.id === accountantId
+            ? { ...accountant, status: "pending" }
+            : accountant
+        )
+      );
+
+      toast.success(
+        "Authorization request sent. Waiting for accountant approval."
+      );
     } catch (err) {
       console.error("Authorization failed:", err);
       toast.error(
@@ -183,7 +148,54 @@ export default function AccountantPage() {
     }
   };
 
-  // Update the fetchAuthorizationStatus function
+  const handleDeauthorize = async () => {
+    try {
+      const token = localStorage.getItem("userToken");
+      const decoded = jwtDecode(token);
+      const userId = decoded.id;
+
+      const response = await fetch(
+        `${import.meta.env.VITE_BASE_URL}/accountant/remove-auth`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: token,
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+          body: JSON.stringify({
+            userId: userId,
+            accountId: accountantToDeauthorize.id,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to remove authorization");
+      }
+
+      // Update the local state
+      setAccountants(
+        accountants.map((accountant) =>
+          accountant.id === accountantToDeauthorize.id
+            ? { ...accountant, status: "unauthorized" }
+            : accountant
+        )
+      );
+
+      toast.success("Successfully removed authorization");
+      setShowConfirmationModal(false);
+      setAccountantToDeauthorize(null);
+    } catch (err) {
+      console.error("Deauthorization failed:", err);
+      toast.error(
+        err.message || "Failed to remove authorization. Please try again."
+      );
+    }
+  };
+
   const fetchAuthorizationStatus = async () => {
     try {
       const token = localStorage.getItem("userToken");
@@ -527,6 +539,20 @@ export default function AccountantPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {showConfirmationModal && accountantToDeauthorize && (
+        <ConfirmationModal
+          isOpen={showConfirmationModal}
+          onClose={() => {
+            setShowConfirmationModal(false);
+            setAccountantToDeauthorize(null);
+          }}
+          onConfirm={handleDeauthorize}
+          action="reject"
+          title="Confirm Deauthorization"
+          message={`Are you sure you want to deauthorize ${accountantToDeauthorize.name}? This will revoke their access to your account.`}
+        />
       )}
     </div>
   );
