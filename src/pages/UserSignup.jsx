@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { toast } from "react-toastify";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { Eye, EyeOff, ArrowLeft} from "lucide-react";
+import { Eye, EyeOff, ArrowLeft } from "lucide-react";
 import Header from "../components/Header";
 import PhoneInput from "react-phone-input-2";
 import "react-phone-input-2/lib/style.css";
@@ -9,18 +9,19 @@ import "react-phone-input-2/lib/style.css";
 export default function UserSignupPage() {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
-    fullName: "",
+    firstName: "",
+    lastName: "",
     email: "",
     password: "",
     confirmPassword: "",
     phone: "",
+    address: "",
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
-  const {role} = useParams();
-
+  const { role } = useParams();
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -42,22 +43,25 @@ export default function UserSignupPage() {
     setFormData((prev) => ({
       ...prev,
       phone: value,
-    }))
+    }));
 
     if (errors.phone) {
       setErrors((prev) => {
-        const newErrors = { ...prev }
-        delete newErrors.phone
-        return newErrors
-      })
+        const newErrors = { ...prev };
+        delete newErrors.phone;
+        return newErrors;
+      });
     }
   };
 
-  // validation 
+  // validation
   const validateForm = () => {
     const newErrors = {};
-    if (!formData.fullName.trim()) {
-      newErrors.firstName = "name is required";
+    if (!formData.firstName.trim()) {
+      newErrors.firstName = "First name is required";
+    }
+    if (!formData.lastName.trim()) {
+      newErrors.lastName = "Last name is required";
     }
 
     if (!formData.email.trim()) {
@@ -83,31 +87,36 @@ export default function UserSignupPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    console.log("handleSubmit is running",import.meta.env.VITE_BASE_URL)
+    console.log("handleSubmit is running", import.meta.env.VITE_BASE_URL);
 
     // if (!validateForm()) return;
 
     setIsLoading(true);
 
     try {
-      const user = await fetch(`${import.meta.env.VITE_BASE_URL}/auth/register`, {  // Change the URL based on your API route
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-            fname: formData.fullName.split(" ")[0],
-            lname: formData.fullName.split(" ")[1],
+      const user = await fetch(
+        `${import.meta.env.VITE_BASE_URL}/auth/register`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            fname: formData.firstName,
+            lname: formData.lastName,
             email: formData.email,
+            phone: formData.phone,
             password: formData.password,
+            address: formData.address,
             role: role,
-        })
-    })
-    if(user.status !== 200){
-      toast.error("Error signing up !!")
-      throw new Error("Error signing up");
-    }
-    toast.success("Wohha signed up successfully!, PLs Login");
+          }),
+        }
+      );
+      if (user.status !== 200) {
+        toast.error("Error signing up !!");
+        throw new Error("Error signing up");
+      }
+      toast.success("Wohha signed up successfully!, PLs Login");
       navigate("/login");
     } catch {
       setErrors({ form: "An error occurred. Please try again." });
@@ -118,7 +127,7 @@ export default function UserSignupPage() {
 
   return (
     <div className="min-h-screen bg-black text-white flex flex-col">
-      <Header/>
+      <Header />
       {/* Content */}
       <div className="flex-grow flex items-center justify-center px-4 py-12">
         <div className="w-full max-w-md">
@@ -148,31 +157,77 @@ export default function UserSignupPage() {
               )}
 
               <form onSubmit={handleSubmit} className="space-y-6">
-                {/* Full Name */}
+                {/* First Name */}
                 <div>
                   <label
-                    htmlFor="fulltName"
+                    htmlFor="firstName"
                     className="block text-sm font-medium mb-1.5 text-gray-300"
                   >
-                    Full Name
+                    First Name
                   </label>
                   <input
                     type="text"
-                    id="fulltName"
-                    name="fullName"
-                    value={formData.fullName}
+                    id="firstName"
+                    name="firstName"
+                    value={formData.firstName}
                     onChange={handleChange}
                     className="w-full p-3 bg-zinc-800 border border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400"
-                    placeholder="Full Name"
+                    placeholder="First Name"
                     required
                   />
-                  {errors.fullName && (
+                  {errors.firstName && (
                     <p className="mt-1 text-xs text-red-400">
-                      {errors.fullName}
+                      {errors.firstName}
                     </p>
                   )}
                 </div>
-
+                <div>
+                  <label
+                    htmlFor="lastName"
+                    className="block text-sm font-medium mb-1.5 text-gray-300"
+                  >
+                    Last Name
+                  </label>
+                  <input
+                    type="text"
+                    id="lastName"
+                    name="lastName"
+                    value={formData.lastName}
+                    onChange={handleChange}
+                    className="w-full p-3 bg-zinc-800 border border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                    placeholder="Last Name"
+                    required
+                  />
+                  {errors.lastName && (
+                    <p className="mt-1 text-xs text-red-400">
+                      {errors.lastName}
+                    </p>
+                  )}
+                </div>
+                {/* Address */}
+                <div>
+                  <label
+                    htmlFor="address"
+                    className="block text-sm font-medium mb-1.5 text-gray-300"
+                  >
+                    Address
+                  </label>
+                  <input
+                    type="text"
+                    id="address"
+                    name="address"
+                    value={formData.address}
+                    onChange={handleChange}
+                    className="w-full p-3 bg-zinc-800 border border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                    placeholder="Enter your address"
+                    required
+                  />
+                  {errors.address && (
+                    <p className="mt-1 text-xs text-red-400">
+                      {errors.address}
+                    </p>
+                  )}
+                </div>
                 {/* Email */}
                 <div>
                   <label
@@ -190,12 +245,17 @@ export default function UserSignupPage() {
                     className="w-full p-3 bg-zinc-800 border border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400"
                     placeholder="user@example.com"
                   />
-                  {errors.email && <p className="mt-1 text-xs text-red-400">{errors.email}</p>}
+                  {errors.email && (
+                    <p className="mt-1 text-xs text-red-400">{errors.email}</p>
+                  )}
                 </div>
 
                 {/* Phone Number */}
                 <div>
-                  <label htmlFor="phone" className="block text-sm font-medium mb-1.5 text-gray-300">
+                  <label
+                    htmlFor="phone"
+                    className="block text-sm font-medium mb-1.5 text-gray-300"
+                  >
                     Phone Number
                   </label>
                   <div className="phone-input-container">
@@ -212,10 +272,12 @@ export default function UserSignupPage() {
                       containerClass="phone-input"
                       buttonClass="phone-dropdown-button"
                       dropdownClass="phone-dropdown"
-                      inputStyle={{paddingLeft:"50px"}}
+                      inputStyle={{ paddingLeft: "50px" }}
                     />
                   </div>
-                  {errors.phone && <p className="mt-1 text-xs text-red-400">{errors.phone}</p>}
+                  {errors.phone && (
+                    <p className="mt-1 text-xs text-red-400">{errors.phone}</p>
+                  )}
                 </div>
 
                 {/* Password */}
