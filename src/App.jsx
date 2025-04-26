@@ -10,6 +10,7 @@ import Bin from "./pages/user/Bin";
 import Invitation from "./pages/user/Invitation";
 import ProtectRouteComp from "./components/ProtectRouteComp";
 import RenderTransactionOrTransactionLog from "./pages/user/RenderTransactionOrTransactionLog";
+import Accounts from "./pages/user/Accounts";
 
 function App() {
   return (
@@ -20,10 +21,19 @@ function App() {
         <Route path="/signup" element={<RoleSelection />} />
         <Route path="/register/:role" element={<UserSignup />} />
         {/* user */}
-        <Route path="/dashboard" element={<ProtectRouteComp routeName={"dashboard"}><DashboardLayout /></ProtectRouteComp>}>
-        {/* /* <Route path="quick-actions" element={<QuickActions />}/> */}
-
-          <Route path="transactions" element={<RenderTransactionOrTransactionLog />} />
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectRouteComp routeName={"dashboard"}>
+              <DashboardLayout />
+            </ProtectRouteComp>
+          }
+        >
+          {/* /* <Route path="quick-actions" element={<QuickActions />}/> */}
+          <Route
+            path="transactions"
+            element={<RenderTransactionOrTransactionLog />}
+          />
           {/* <Route path="AddTransactions" element={<AddTransactions />} /> */}
           <Route index element={<Navigate to="transactions" replace />} />{" "}
           {/* Default */}
@@ -32,6 +42,7 @@ function App() {
           <Route path="users" element={<Users />} />
           <Route path="bin" element={<Bin />} />
           <Route path="invitations" element={<Invitation />} />
+          <Route path="accounts" element={<Accounts />} />
         </Route>
       </Routes>
     </>
