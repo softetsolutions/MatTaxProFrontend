@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ArrowUpDown, UserCheck, Info, Clock } from "lucide-react";
+import { ArrowUpDown, UserCheck, Info, Clock, Search } from "lucide-react";
 import { toast } from "react-toastify";
 import { handleUnauthoriz } from "../../utils/helperFunction";
 import { useNavigate } from "react-router-dom";
@@ -10,6 +10,7 @@ import {
   fetchAuthorizationStatus,
   fetchAccountants,
 } from "../../utils/authorizedUsers";
+import { searchAccountants } from "../../utils/searchUtils";
 
 export default function AccountantPage() {
   const [accountants, setAccountants] = useState([]);
@@ -23,6 +24,8 @@ export default function AccountantPage() {
   const [accountantToDeauthorize, setAccountantToDeauthorize] = useState(null);
   const [accountantToAuthorize, setAccountantToAuthorize] = useState(null);
   const [isAuthorizeModal, setIsAuthorizeModal] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filteredAccountants, setFilteredAccountants] = useState([]);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -64,6 +67,11 @@ export default function AccountantPage() {
 
     loadAccountants();
   }, [navigate]);
+
+  useEffect(() => {
+    const results = searchAccountants(accountants, searchTerm);
+    setFilteredAccountants(results);
+  }, [searchTerm, accountants]);
 
   const handleSort = (field) => {
     if (sortField === field) {
@@ -242,20 +250,6 @@ export default function AccountantPage() {
     setShowModal(false);
     setSelectedAccountant(null);
   };
-
-  const sortedAccountants = [...accountants].sort((a, b) => {
-    const modifier = sortDirection === "asc" ? 1 : -1;
-
-    if (sortField === "accountantId") {
-      return a.accountantId.localeCompare(b.accountantId) * modifier;
-    } else if (sortField === "name") {
-      return a.name.localeCompare(b.name) * modifier;
-    } else if (sortField === "email") {
-      return a.email.localeCompare(b.email) * modifier;
-    }
-    return 0;
-  });
-
   if (loading) {
     return (
       <div className="flex justify-center items-center h-screen">
@@ -289,6 +283,18 @@ export default function AccountantPage() {
             View and manage accountant access
           </p>
         </div>
+        <div className="relative">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <Search className="h-5 w-5 text-gray-400" />
+          </div>
+          <input
+            type="text"
+            placeholder="Search by name or address..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="text-black pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+        </div>
       </div>
 
       <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
@@ -320,17 +326,19 @@ export default function AccountantPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {sortedAccountants.length === 0 ? (
+              {filteredAccountants.length === 0 ? (
                 <tr>
                   <td
                     colSpan={6}
                     className="px-4 py-6 text-center text-gray-500"
                   >
-                    No accountants found
+                    {searchTerm
+                      ? "No matching accountants found"
+                      : "No accountants found"}
                   </td>
                 </tr>
               ) : (
-                sortedAccountants.map((accountant) => (
+                filteredAccountants.map((accountant) => (
                   <tr
                     key={accountant.id}
                     className="hover:bg-gray-50 transition-colors"
@@ -477,7 +485,8 @@ export default function AccountantPage() {
           message={
             <span>
               Are you sure you want to deauthorize{" "}
-              <span className="font-bold">{accountantToDeauthorize.name}</span>? This will revoke their access to your account.
+              <span className="font-bold">{accountantToDeauthorize.name}</span>?
+              This will revoke their access to your account.
             </span>
           }
         />
@@ -496,7 +505,8 @@ export default function AccountantPage() {
           message={
             <span>
               Are you sure you want to authorize{" "}
-              <span className="font-bold">{accountantToAuthorize.name}</span>? This will allow them to access your account.
+              <span className="font-bold">{accountantToAuthorize.name}</span>?
+              This will allow them to access your account.
             </span>
           }
         />
