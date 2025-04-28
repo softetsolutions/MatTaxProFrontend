@@ -121,16 +121,17 @@ export default function LoginPage() {
       );
 
       if(user.status !== 200){
-        throw new Error("Error logging in");
+        const errorData = await user.json();
+        throw new Error(errorData.message || "Error logging in");
       }
       user = await user.json();
       console.log("user",user)
       localStorage.setItem("userToken", user.data);
       toast.success("Wohha logged in successfully!");
       navigate("/dashboard");
-    } catch (e) {
-      setError("Invalid email or password. Please try again.");
-      console.error(e);
+    } catch (e) {      
+      console.error("Error message:", e.message);   
+      setError(e.message);
       if (recaptchaRef.current) {
         recaptchaRef.current.reset();
       }

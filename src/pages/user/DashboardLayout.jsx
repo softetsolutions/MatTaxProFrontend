@@ -10,20 +10,29 @@ export default function DashboardLayout() {
   const navigate = useNavigate();
   const [pendingInvitationsCount, setPendingInvitationsCount] = useState(0);
 
-  const navigation = jwtDecode(
-    localStorage.getItem("userToken")
-  ).allowedRoutes.filter((item) => Object.keys(routeMapping).includes(item));
+  const decoded = jwtDecode(localStorage.getItem("userToken"));
+  const navigation = decoded.allowedRoutes.filter((item) =>
+    Object.keys(routeMapping).includes(item)
+  );
 
   useEffect(() => {
-    fetchAndUpdatePendingInvitationsCount(setPendingInvitationsCount);
-    const interval = setInterval(
-      () => fetchAndUpdatePendingInvitationsCount(setPendingInvitationsCount),
-      30000
-    );
+    const fetchInvitationToShowAsNotification = () => {
+      fetchAndUpdatePendingInvitationsCount(setPendingInvitationsCount);
+      const interval = setInterval(
+        () => fetchAndUpdatePendingInvitationsCount(setPendingInvitationsCount),
+        30000
+      );
+      return interval;
+    };
+    let interval;
+    if (decoded.role === "accountant") {
+      interval = fetchInvitationToShowAsNotification();
+    }
+
     return () => clearInterval(interval);
   }, []);
 
-  console.log("navigation", navigation);
+  console.log("navigation", jwtDecode(localStorage.getItem("userToken")));
 
   const handleLogOut = async () => {
     try {

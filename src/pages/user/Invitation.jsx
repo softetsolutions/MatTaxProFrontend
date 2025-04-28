@@ -39,7 +39,7 @@ export default function InvitationPage() {
     loadInvitations();
 
     // periodic refresh
-    const interval = setInterval(loadInvitations, 30000);
+    const interval = setInterval(loadInvitations, 3000);
     return () => clearInterval(interval);
   }, []);
 

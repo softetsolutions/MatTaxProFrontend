@@ -11,8 +11,16 @@ import Invitation from "./pages/user/Invitation";
 import ProtectRouteComp from "./components/ProtectRouteComp";
 import RenderTransactionOrTransactionLog from "./pages/user/RenderTransactionOrTransactionLog";
 import Accounts from "./pages/user/Accounts";
+import VerifyEmail from './pages/VerifyEmail'
+import AllUsers from "./pages/admin/Allusers";
+import AllAccountants from "./pages/admin/Allaccountant";
+import { jwtDecode } from "jwt-decode";
 
 function App() {
+
+  const token = localStorage.getItem("userToken");
+  const decoded = token && jwtDecode(token);
+
   return (
     <>
       <Routes>
@@ -20,6 +28,7 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<RoleSelection />} />
         <Route path="/register/:role" element={<UserSignup />} />
+        <Route path="/verifyEmail/:token" element={<VerifyEmail />} />
         {/* user */}
         <Route
           path="/dashboard"
@@ -29,20 +38,20 @@ function App() {
             </ProtectRouteComp>
           }
         >
-          {/* /* <Route path="quick-actions" element={<QuickActions />}/> */}
           <Route
             path="transactions"
             element={<RenderTransactionOrTransactionLog />}
           />
-          {/* <Route path="AddTransactions" element={<AddTransactions />} /> */}
-          <Route index element={<Navigate to="transactions" replace />} />{" "}
-          {/* Default */}
-          {/* <Route path="transactionlog" element={<TransactionLog />} /> */}
+          <Route index element={<Navigate to={decoded?.role === "admin" ? "allUsers" : "transactions"} replace />} />
           <Route path="addaccountant" element={<AccountantPage />} />
           <Route path="users" element={<Users />} />
           <Route path="bin" element={<Bin />} />
           <Route path="invitations" element={<Invitation />} />
           <Route path="accounts" element={<Accounts />} />
+
+          {/* Admin Routes */}
+          <Route path="allUsers" element={<AllUsers />} />
+          <Route path="allAccountants" element={<AllAccountants />} />
         </Route>
       </Routes>
     </>

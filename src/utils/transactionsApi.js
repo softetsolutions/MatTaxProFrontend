@@ -1,6 +1,7 @@
 import {getAuthInfo} from "./auth";
+import { handleUnauthoriz } from "./helperFunction";
 
-export const fetchTransactions = async (selectedUserId = null) => {
+export const fetchTransactions = async (selectedUserId = null, navigate) => {
   try {
     const { token, userId, role } = getAuthInfo();
 
@@ -25,6 +26,7 @@ export const fetchTransactions = async (selectedUserId = null) => {
 
     if (!response.ok) {
       if (response.status === 401) {
+        handleUnauthoriz(navigate);
         throw new Error("Unauthorized: Please check your authentication");
       }
       throw new Error("Failed to fetch transactions");

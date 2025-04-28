@@ -7,13 +7,9 @@ import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
 import { handleUnauthoriz } from "../../utils/helperFunction";
 import { fetchAuthorizedUsers } from "../../utils/authorizedUsers";
-import {
-  fetchTransactions,
-  createTransaction,
-  updateTransaction,
-  deleteTransaction,
-} from "../../utils/transactionsApi";
-import { fetchAllVendors } from "../../utils/vendorApi";
+import { fetchTransactions, createTransaction, updateTransaction, deleteTransaction } from "../../utils/transactionsApi";
+import { fetchAllVendors } from "../../utils/vendorApi";  
+import { downloadCSV } from "../../utils/convertAndDownloadCsv";  
 
 export default function TransactionsPage({ setIsTransasctionLog }) {
   const [sortField, setSortField] = useState("date");
@@ -73,7 +69,7 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
         setLoading(true);
         setError(null);
         const data = await Promise.allSettled([
-          fetchTransactions(selectedUserId),
+          fetchTransactions(selectedUserId, navigate),
           fetchAllVendors(),
         ]);
         // console.log(data);
@@ -435,6 +431,7 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
 
           {userRole !== "accountant" ||
           (userRole === "accountant" && selectedUserId) ? (
+            <>
             <button
               onClick={() => {
                 setEditingId(null);
@@ -444,6 +441,18 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
             >
               Add Transaction
             </button>
+
+            <button
+              onClick={() => {
+                downloadCSV(transactions)
+              }}
+              disabled={transactions.length === 0}
+              className={`inline-flex items-center px-4 py-2 ${transactions.length === 0 ? `bg-blue-200` : `bg-blue-600 hover:bg-blue-700`} text-white text-sm font-medium rounded-md transition-colors hover:cursor-pointer`}
+            >
+              Export Trasnsaction
+            </button>
+
+            </>
           ) : null}
         </div>
       </div>
