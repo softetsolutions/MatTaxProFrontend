@@ -1,10 +1,15 @@
 import { useState, useEffect } from "react";
 import { ArrowUpDown, UserCheck, Info, Clock } from "lucide-react";
 import { toast } from "react-toastify";
-import { jwtDecode } from "jwt-decode";
 import { handleUnauthoriz } from "../../utils/helperFunction";
 import { useNavigate } from "react-router-dom";
 import ConfirmationModal from "../../components/ConfirmationModal";
+import {
+  requestAuthorization,
+  removeAuthorization,
+  fetchAuthorizationStatus,
+  fetchAccountants,
+} from "../../utils/authorizedUsers";
 
 export default function AccountantPage() {
   const [accountants, setAccountants] = useState([]);
@@ -16,36 +21,14 @@ export default function AccountantPage() {
   const [error, setError] = useState(null);
   const [showConfirmationModal, setShowConfirmationModal] = useState(false);
   const [accountantToDeauthorize, setAccountantToDeauthorize] = useState(null);
+  const [accountantToAuthorize, setAccountantToAuthorize] = useState(null);
+  const [isAuthorizeModal, setIsAuthorizeModal] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchAccountants = async () => {
+    const loadAccountants = async () => {
       try {
-        const token = localStorage.getItem("userToken");
-        const decoded = jwtDecode(token);
-        console.log(decoded);
-        const userId = decoded.id;
-        const response = await fetch(
-          `${import.meta.env.VITE_BASE_URL}/user/accountants/${userId}`,
-          {
-            method: "GET",
-            headers: {
-              Authorization: token,
-              "Content-Type": "application/json",
-            },
-            credentials: "include",
-          }
-        );
-
-        if (response.status !== 200) {
-          const errorData = await response.json();
-          if (response.status === 401) {
-            handleUnauthoriz(navigate);
-          }
-          throw new Error(errorData.error || "Failed to fetch accountants");
-        }
-
-        const data = await response.json();
+        const data = await fetchAccountants();
 
         // Transform the data to match our component's structure
         const transformedData = data.map((accountant) => ({
@@ -73,11 +56,14 @@ export default function AccountantPage() {
           err.message || "Failed to fetch accountants. Please try again later."
         );
         setLoading(false);
+        if (err.message.includes("Unauthorized")) {
+          handleUnauthoriz(navigate);
+        }
       }
     };
 
-    fetchAccountants();
-  }, []);
+    loadAccountants();
+  }, [navigate]);
 
   const handleSort = (field) => {
     if (sortField === field) {
@@ -88,58 +74,41 @@ export default function AccountantPage() {
     }
   };
 
-  const handleAuthorize = async (accountantId) => {
+  const handleAuthorize = (accountant) => {
+    const isCurrentlyAuthorized = accountant.status === "authorized";
+    const isPending = accountant.status === "pending";
+
+    if (isPending) {
+      toast.info("Authorization request is already pending");
+      return;
+    }
+
+    if (isCurrentlyAuthorized) {
+      // If already authorized, show deauthorization confirmation
+      setAccountantToDeauthorize(accountant);
+      setShowConfirmationModal(true);
+    } else {
+      // If not authorized, show authorization confirmation
+      setAccountantToAuthorize(accountant);
+      setIsAuthorizeModal(true);
+    }
+  };
+
+  const handleConfirmAuthorize = async () => {
     try {
-      const token = localStorage.getItem("userToken");
-      const decoded = jwtDecode(token);
-      const userId = decoded.id;
-
-      const accountant = accountants.find((acc) => acc.id === accountantId);
-      const isCurrentlyAuthorized = accountant.status === "authorized";
-
-      if (isCurrentlyAuthorized) {
-        // confirmation modal for deauthorization
-        setAccountantToDeauthorize(accountant);
-        setShowConfirmationModal(true);
-        return;
-      }
-
-      // Request authorization
-      const response = await fetch(
-        `${import.meta.env.VITE_BASE_URL}/accountant/auth`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: token,
-            "Content-Type": "application/json",
-          },
-          credentials: "include",
-          body: JSON.stringify({
-            userId: userId,
-            accountId: accountantId,
-            status: "pending",
-          }),
-        }
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to request authorization");
-      }
-
-      // Update the local state to show pending status
+      await requestAuthorization(accountantToAuthorize.id);
       setAccountants(
         accountants.map((accountant) =>
-          accountant.id === accountantId
+          accountant.id === accountantToAuthorize.id
             ? { ...accountant, status: "pending" }
             : accountant
         )
       );
-
       toast.success(
         "Authorization request sent. Waiting for accountant approval."
       );
+      setIsAuthorizeModal(false);
+      setAccountantToAuthorize(null);
     } catch (err) {
       console.error("Authorization failed:", err);
       toast.error(
@@ -150,33 +119,7 @@ export default function AccountantPage() {
 
   const handleDeauthorize = async () => {
     try {
-      const token = localStorage.getItem("userToken");
-      const decoded = jwtDecode(token);
-      const userId = decoded.id;
-
-      const response = await fetch(
-        `${import.meta.env.VITE_BASE_URL}/accountant/remove-auth`,
-        {
-          method: "DELETE",
-          headers: {
-            Authorization: token,
-            "Content-Type": "application/json",
-          },
-          credentials: "include",
-          body: JSON.stringify({
-            userId: userId,
-            accountId: accountantToDeauthorize.id,
-          }),
-        }
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to remove authorization");
-      }
-
-      // Update the local state
+      await removeAuthorization(accountantToDeauthorize.id);
       setAccountants(
         accountants.map((accountant) =>
           accountant.id === accountantToDeauthorize.id
@@ -184,7 +127,6 @@ export default function AccountantPage() {
             : accountant
         )
       );
-
       toast.success("Successfully removed authorization");
       setShowConfirmationModal(false);
       setAccountantToDeauthorize(null);
@@ -196,52 +138,33 @@ export default function AccountantPage() {
     }
   };
 
-  const fetchAuthorizationStatus = async () => {
-    try {
-      const token = localStorage.getItem("userToken");
-      const decoded = jwtDecode(token);
-      const userId = decoded.id;
-
-      const response = await fetch(
-        `${import.meta.env.VITE_BASE_URL}/user/accountants/${userId}`,
-        {
-          method: "GET",
-          headers: {
-            Authorization: token,
-            "Content-Type": "application/json",
-          },
-          credentials: "include",
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch authorization status");
-      }
-
-      const data = await response.json();
-
-      // Update the accountants state with the latest authorization status
-      setAccountants((prevAccountants) =>
-        prevAccountants.map((accountant) => {
-          const authData = data.find(
-            (auth) => auth.accountId === accountant.id
-          );
-          if (!authData) {
-            return accountant; // Keep the existing status if no data found
-          }
-          return {
-            ...accountant,
-            status: authData.status || accountant.status,
-          };
-        })
-      );
-    } catch (err) {
-      console.error("Failed to fetch authorization status:", err);
-    }
-  };
-
   useEffect(() => {
-    const interval = setInterval(fetchAuthorizationStatus, 30000);
+    const interval = setInterval(async () => {
+      try {
+        const data = await fetchAuthorizationStatus();
+        const transformedData = data.map((accountant) => ({
+          id: accountant.id,
+          accountantId: `ACC${String(accountant.id).padStart(3, "0")}`,
+          name: `${accountant.fname} ${accountant.lname}`,
+          email: accountant.email,
+          address: accountant.address || "N/A",
+          status:
+            accountant.is_authorized === "approved"
+              ? "authorized"
+              : accountant.is_authorized === "pending"
+              ? "pending"
+              : accountant.is_authorized === "rejected"
+              ? "rejected"
+              : "unauthorized",
+          createdAt: new Date(accountant.created_at).toLocaleDateString(),
+        }));
+
+        setAccountants(transformedData);
+      } catch (err) {
+        console.error("Failed to fetch authorization status:", err);
+      }
+    }, 30000);
+
     return () => clearInterval(interval);
   }, []);
 
@@ -263,7 +186,7 @@ export default function AccountantPage() {
 
     return (
       <button
-        onClick={() => handleAuthorize(accountant.id)}
+        onClick={() => handleAuthorize(accountant)}
         className={`p-1 ${
           isAuthorized
             ? "text-red-600 hover:text-red-800 hover:bg-red-50"
@@ -524,7 +447,7 @@ export default function AccountantPage() {
               </button>
               {selectedAccountant.status !== "pending" && (
                 <button
-                  onClick={() => handleAuthorize(selectedAccountant.id)}
+                  onClick={() => handleAuthorize(selectedAccountant)}
                   className={`px-4 py-2 text-white rounded ${
                     selectedAccountant.status === "authorized"
                       ? "bg-red-600 hover:bg-red-700"
@@ -551,7 +474,31 @@ export default function AccountantPage() {
           onConfirm={handleDeauthorize}
           action="reject"
           title="Confirm Deauthorization"
-          message={`Are you sure you want to deauthorize ${accountantToDeauthorize.name}? This will revoke their access to your account.`}
+          message={
+            <span>
+              Are you sure you want to deauthorize{" "}
+              <span className="font-bold">{accountantToDeauthorize.name}</span>? This will revoke their access to your account.
+            </span>
+          }
+        />
+      )}
+
+      {isAuthorizeModal && accountantToAuthorize && (
+        <ConfirmationModal
+          isOpen={isAuthorizeModal}
+          onClose={() => {
+            setIsAuthorizeModal(false);
+            setAccountantToAuthorize(null);
+          }}
+          onConfirm={handleConfirmAuthorize}
+          action="approve"
+          title="Confirm Authorization"
+          message={
+            <span>
+              Are you sure you want to authorize{" "}
+              <span className="font-bold">{accountantToAuthorize.name}</span>? This will allow them to access your account.
+            </span>
+          }
         />
       )}
     </div>

@@ -7,10 +7,15 @@ import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
 import { handleUnauthoriz } from "../../utils/helperFunction";
 import { fetchAuthorizedUsers } from "../../utils/authorizedUsers";
-import { fetchTransactions, createTransaction, updateTransaction, deleteTransaction } from "../../utils/transactionsApi";
-import { fetchAllVendors } from "../../utils/vendorApi";    
+import {
+  fetchTransactions,
+  createTransaction,
+  updateTransaction,
+  deleteTransaction,
+} from "../../utils/transactionsApi";
+import { fetchAllVendors } from "../../utils/vendorApi";
 
-export default function TransactionsPage({setIsTransasctionLog}) {
+export default function TransactionsPage({ setIsTransasctionLog }) {
   const [sortField, setSortField] = useState("date");
   const [sortDirection, setSortDirection] = useState("asc");
   const [showModal, setShowModal] = useState(false);
@@ -40,7 +45,7 @@ export default function TransactionsPage({setIsTransasctionLog}) {
   const userRef = useRef(null);
   const navigate = useNavigate();
 
-  console.log("vendorOptions",vendorOptions);
+  console.log("vendorOptions", vendorOptions);
 
   // dropdown options
   const categoryOptions = [
@@ -67,16 +72,19 @@ export default function TransactionsPage({setIsTransasctionLog}) {
       try {
         setLoading(true);
         setError(null);
-        const data = await Promise.allSettled([fetchTransactions(selectedUserId), fetchAllVendors()]);
+        const data = await Promise.allSettled([
+          fetchTransactions(selectedUserId),
+          fetchAllVendors(),
+        ]);
         // console.log(data);
-        const vendors = data[1].value.reduce((acc,vendor)=>{
+        const vendors = data[1].value.reduce((acc, vendor) => {
           let vendorData = {
-            id:vendor.id,
-            name:vendor.name
-          }
+            id: vendor.id,
+            name: vendor.name,
+          };
           acc.push(vendorData);
           return acc;
-        },[])
+        }, []);
         setVendorOptions(vendors);
         setTransactions(data[0].value);
       } catch (err) {
@@ -170,6 +178,8 @@ export default function TransactionsPage({setIsTransasctionLog}) {
             error: "Failed to update transaction 🤯",
           }
         );
+        setShowModal(false);
+        setEditingId(null);
       } else {
         // Create new transaction
         const token = localStorage.getItem("userToken");
@@ -182,7 +192,7 @@ export default function TransactionsPage({setIsTransasctionLog}) {
           type: formData.type,
           vendorId: formData.vendor,
           isdeleted: false,
-          userid: userRole === "accountant" ? selectedUserId : userId
+          userid: userRole === "accountant" ? selectedUserId : userId,
         };
 
         await toast.promise(
@@ -193,18 +203,36 @@ export default function TransactionsPage({setIsTransasctionLog}) {
             error: "Failed to create transaction 🤯",
           }
         );
+
+        // Clear form fields && keep modal open
+        setFormData({ amount: "", category: "", type: "debit", vendorId: "" });
+        setFiles([]);
       }
 
       setRefreshTableList((prev) => !prev);
-      setFormData({ amount: "", category: "", type: "debit", vendorId: "" });
-      setFiles([]);
-      setShowModal(false);
-      setEditingId(null);
     } catch (err) {
       console.error("Operation failed:", err);
       toast.error(err.message || "Operation failed. Please try again.");
     }
   };
+
+  // Enter key
+  const handleKeyPress = (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      handleSubmit();
+    }
+  };
+
+  // Add event listener for Enter key
+  useEffect(() => {
+    if (showModal) {
+      document.addEventListener("keydown", handleKeyPress);
+    }
+    return () => {
+      document.removeEventListener("keydown", handleKeyPress);
+    };
+  }, [showModal, formData, editingId]);
 
   const handleEdit = (id) => {
     const transactionToEdit = transactions.find((txn) => txn.id === id);
@@ -222,14 +250,11 @@ export default function TransactionsPage({setIsTransasctionLog}) {
 
   const handleDelete = async (id) => {
     try {
-      await toast.promise(
-        deleteTransaction(id, selectedUserId),
-        {
-          pending: "Deleting Transaction",
-          success: "Successfully Deleted Transaction 👌",
-          error: "Got Error Deleting transaction, Try again 🤯",
-        }
-      );
+      await toast.promise(deleteTransaction(id, selectedUserId), {
+        pending: "Deleting Transaction",
+        success: "Successfully Deleted Transaction 👌",
+        error: "Got Error Deleting transaction, Try again 🤯",
+      });
       setRefreshTableList((prev) => !prev);
     } catch (e) {
       console.error(e);
@@ -505,13 +530,13 @@ export default function TransactionsPage({setIsTransasctionLog}) {
                       </td>
                       <td className="px-4 py-3 text-sm">
                         <div className="flex gap-2">
-                        <button
-                          onClick={() => setIsTransasctionLog(txn.id)}
-                          className="p-1 text-blue-600 hover:text-blue-800 rounded hover:bg-blue-50"
-                          title="Log"
-                        >
-                          <Logs className="w-4 h-4" />
-                        </button>
+                          <button
+                            onClick={() => setIsTransasctionLog(txn.id)}
+                            className="p-1 text-blue-600 hover:text-blue-800 rounded hover:bg-blue-50"
+                            title="Log"
+                          >
+                            <Logs className="w-4 h-4" />
+                          </button>
                           <button
                             onClick={() => handleEdit(txn.id)}
                             className="p-1 text-blue-600 hover:text-blue-800 rounded hover:bg-blue-50"
