@@ -15,8 +15,7 @@ const ConfirmationModal = ({
       <div className="w-full max-w-md bg-white p-6 rounded-lg shadow-xl">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-xl font-semibold text-gray-900">
-            {title ||
-              `Confirm ${action === "approve" ? "Approval" : "Rejection"}`}
+            {title || `Confirm ${action}`}
           </h3>
           <button
             onClick={onClose}
@@ -26,7 +25,7 @@ const ConfirmationModal = ({
           </button>
         </div>
         <p className="text-gray-600 mb-6">
-          {message || `Are you sure you want to ${action} this invitation?`}
+          {message || `Are you sure you want to ${action}?`}
         </p>
         <div className="flex justify-end gap-3">
           <button
@@ -38,12 +37,12 @@ const ConfirmationModal = ({
           <button
             onClick={onConfirm}
             className={`px-4 py-2 text-white rounded hover:cursor-pointer ${
-              action === "approve"
+              action === "unlock"
                 ? "bg-green-600 hover:bg-green-700"
                 : "bg-red-600 hover:bg-red-700"
             }`}
           >
-            {action === "approve" ? "Approve" : "Reject"}
+            {action.charAt(0).toUpperCase() + action.slice(1)}
           </button>
         </div>
       </div>
@@ -55,9 +54,9 @@ ConfirmationModal.propTypes = {
   isOpen: PropTypes.bool.isRequired,
   onClose: PropTypes.func.isRequired,
   onConfirm: PropTypes.func.isRequired,
-  action: PropTypes.oneOf(["approve", "reject"]).isRequired,
+  action: PropTypes.oneOf(["lock", "unlock"]).isRequired,
   title: PropTypes.string,
-  message: PropTypes.string,
+  message: PropTypes.node,
 };
 
 export default ConfirmationModal;

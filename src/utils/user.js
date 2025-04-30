@@ -72,4 +72,79 @@ export const updateUserDetails = async (userData) => {
     console.error("Error updating user details:", error);
     throw error;
   }
-}; 
+};
+
+export const fetchAllUsers = async () => {
+  const { token } = getAuthInfo();
+
+  const response = await fetch(
+    `${import.meta.env.VITE_BASE_URL}/user/user-details`,
+    {
+      method: "GET",
+      headers: {
+        Authorization: token,
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch users");
+  }
+
+  const data = await response.json();
+  return data;
+};
+
+export const fetchAllAccountants = async () => {
+  const { token } = getAuthInfo();
+
+  const response = await fetch(
+    `${import.meta.env.VITE_BASE_URL}/user/accountant-details`,
+    {
+      method: "GET",
+      headers: {
+        Authorization: token,
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch accountants");
+  }
+
+  const data = await response.json();
+  return data;
+};
+
+export const accountLockUnlock = async (userId, isLock) => {
+  const { token, userId: adminId } = getAuthInfo();
+
+  const response = await fetch(
+    `${import.meta.env.VITE_BASE_URL}/admin/account-lock-unlock`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: token,
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+      body: JSON.stringify({
+        userId,
+        id: adminId,
+        isLock: isLock ? "locked" : "unlocked",
+      }),
+    }
+  );
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.message || "Failed to update account status");
+  }
+
+  const data = await response.json();
+  return data;
+};

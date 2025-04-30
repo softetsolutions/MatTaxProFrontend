@@ -11,13 +11,12 @@ import Invitation from "./pages/user/Invitation";
 import ProtectRouteComp from "./components/ProtectRouteComp";
 import RenderTransactionOrTransactionLog from "./pages/user/RenderTransactionOrTransactionLog";
 import Accounts from "./pages/user/Accounts";
-import VerifyEmail from './pages/VerifyEmail'
-import AllUsers from "./pages/admin/Allusers";
-import AllAccountants from "./pages/admin/Allaccountant";
+import VerifyEmail from "./pages/VerifyEmail";
+import AllUsers from "./pages/admin/AllUsers";
+import AllAccountants from "./pages/admin/AllAccountants";
 import { jwtDecode } from "jwt-decode";
 
 function App() {
-
   const token = localStorage.getItem("userToken");
   const decoded = token && jwtDecode(token);
 
@@ -42,7 +41,15 @@ function App() {
             path="transactions"
             element={<RenderTransactionOrTransactionLog />}
           />
-          <Route index element={<Navigate to={decoded?.role === "admin" ? "allUsers" : "transactions"} replace />} />
+          <Route
+            index
+            element={
+              <Navigate
+                to={decoded?.role === "admin" ? "allUsers" : "transactions"}
+                replace
+              />
+            }
+          />
           <Route path="addaccountant" element={<AccountantPage />} />
           <Route path="users" element={<Users />} />
           <Route path="bin" element={<Bin />} />

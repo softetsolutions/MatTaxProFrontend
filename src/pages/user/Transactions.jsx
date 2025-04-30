@@ -7,9 +7,14 @@ import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
 import { handleUnauthoriz } from "../../utils/helperFunction";
 import { fetchAuthorizedUsers } from "../../utils/authorizedUsers";
-import { fetchTransactions, createTransaction, updateTransaction, deleteTransaction } from "../../utils/transactionsApi";
-import { fetchAllVendors } from "../../utils/vendorApi";  
-import { downloadCSV } from "../../utils/convertAndDownloadCsv";  
+import {
+  fetchTransactions,
+  createTransaction,
+  updateTransaction,
+  deleteTransaction,
+} from "../../utils/transactionsApi";
+import { fetchAllVendors } from "../../utils/vendorApi";
+import { downloadCSV } from "../../utils/convertAndDownloadCsv";
 
 export default function TransactionsPage({ setIsTransasctionLog }) {
   const [sortField, setSortField] = useState("date");
@@ -40,6 +45,7 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
   const [vendorOptions, setVendorOptions] = useState([]);
   const userRef = useRef(null);
   const navigate = useNavigate();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   console.log("vendorOptions", vendorOptions);
 
@@ -156,6 +162,7 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
 
   const handleSubmit = async (e) => {
     if (e) e.preventDefault();
+    setIsSubmitting(true);
 
     try {
       if (editingId) {
@@ -176,6 +183,7 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
         );
         setShowModal(false);
         setEditingId(null);
+        setRefreshTableList((prev) => !prev);
       } else {
         // Create new transaction
         const token = localStorage.getItem("userToken");
@@ -200,16 +208,24 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
           }
         );
 
-        // Clear form fields && keep modal open
-        setFormData({ amount: "", category: "", type: "debit", vendorId: "" });
+        // Clear form fields but keep modal open
+        setFormData({ amount: "", category: "", type: "debit", vendor: "" });
         setFiles([]);
       }
-
-      setRefreshTableList((prev) => !prev);
     } catch (err) {
       console.error("Operation failed:", err);
       toast.error(err.message || "Operation failed. Please try again.");
+    } finally {
+      setIsSubmitting(false);
     }
+  };
+
+  const handleCloseModal = () => {
+    setShowModal(false);
+    setEditingId(null);
+    setFormData({ amount: "", category: "", type: "debit", vendor: "" });
+    setFiles([]);
+    setRefreshTableList((prev) => !prev);
   };
 
   // Enter key
@@ -432,26 +448,29 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
           {userRole !== "accountant" ||
           (userRole === "accountant" && selectedUserId) ? (
             <>
-            <button
-              onClick={() => {
-                setEditingId(null);
-                setShowModal(true);
-              }}
-              className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md transition-colors hover:cursor-pointer"
-            >
-              Add Transaction
-            </button>
+              <button
+                onClick={() => {
+                  setEditingId(null);
+                  setShowModal(true);
+                }}
+                className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md transition-colors hover:cursor-pointer"
+              >
+                Add Transaction
+              </button>
 
-            <button
-              onClick={() => {
-                downloadCSV(transactions)
-              }}
-              disabled={transactions.length === 0}
-              className={`inline-flex items-center px-4 py-2 ${transactions.length === 0 ? `bg-blue-200` : `bg-blue-600 hover:bg-blue-700`} text-white text-sm font-medium rounded-md transition-colors hover:cursor-pointer`}
-            >
-              Export Trasnsaction
-            </button>
-
+              <button
+                onClick={() => {
+                  downloadCSV(transactions);
+                }}
+                disabled={transactions.length === 0}
+                className={`inline-flex items-center px-4 py-2 ${
+                  transactions.length === 0
+                    ? `bg-blue-200`
+                    : `bg-blue-600 hover:bg-blue-700`
+                } text-white text-sm font-medium rounded-md transition-colors hover:cursor-pointer`}
+              >
+                Export Trasnsaction
+              </button>
             </>
           ) : null}
         </div>
@@ -579,16 +598,7 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
                 {editingId ? "Edit Transaction" : "Add Transaction"}
               </h3>
               <button
-                onClick={() => {
-                  setShowModal(false);
-                  setEditingId(null);
-                  setFormData({
-                    amount: "",
-                    category: "",
-                    type: "debit",
-                    vendorId: "",
-                  });
-                }}
+                onClick={handleCloseModal}
                 className="text-gray-500 hover:cursor-pointer hover:text-red-500"
               >
                 ✕
@@ -851,20 +861,31 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
             <div className="flex justify-end gap-2 mt-6">
               <button
                 type="button"
-                onClick={() => {
-                  setShowModal(false);
-                  setEditingId(null);
-                }}
+                onClick={handleCloseModal}
                 className="px-4 py-2 text-gray-600 border-2 bg-red-100 border-red-300 rounded hover:bg-red-200 transition-colors hover:cursor-pointer hover:text-red-600"
               >
-                Cancel
+                Close
               </button>
               <button
                 type="submit"
                 onClick={handleSubmit}
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors hover:cursor-pointer"
+                disabled={isSubmitting}
+                className={`px-4 py-2 bg-blue-600 text-white rounded transition-colors hover:cursor-pointer ${
+                  isSubmitting
+                    ? "opacity-50 cursor-not-allowed"
+                    : "hover:bg-blue-700"
+                }`}
               >
-                {editingId ? "Update Transaction" : "Save Transaction"}
+                {isSubmitting ? (
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    {editingId ? "Updating..." : "Saving..."}
+                  </div>
+                ) : editingId ? (
+                  "Update Transaction"
+                ) : (
+                  "Save and Add New Transaction"
+                )}
               </button>
             </div>
           </div>

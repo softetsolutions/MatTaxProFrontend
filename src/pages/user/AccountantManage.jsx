@@ -480,7 +480,7 @@ export default function AccountantPage() {
             setAccountantToDeauthorize(null);
           }}
           onConfirm={handleDeauthorize}
-          action="reject"
+          action="deauthorize"
           title="Confirm Deauthorization"
           message={
             <span>
@@ -500,7 +500,7 @@ export default function AccountantPage() {
             setAccountantToAuthorize(null);
           }}
           onConfirm={handleConfirmAuthorize}
-          action="approve"
+          action="authorize"
           title="Confirm Authorization"
           message={
             <span>
