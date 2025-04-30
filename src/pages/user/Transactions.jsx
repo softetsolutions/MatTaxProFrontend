@@ -199,16 +199,31 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
           userid: userRole === "accountant" ? selectedUserId : userId,
         };
 
-        await toast.promise(
-          createTransaction(transactionData, selectedUserId),
-          {
-            pending: "Creating transaction...",
+        if (files.length > 0) {
+          const formDataObj = new FormData();
+          Object.entries(transactionData).forEach(([key, value]) => {
+            formDataObj.append(key, value);
+          });
+          files.forEach((file) => {
+            formDataObj.append("file", file);
+          });
+
+          await toast.promise(createTransaction(formDataObj, selectedUserId), {
+            pending: "Creating transaction with receipts...",
             success: "Transaction created successfully 👌",
             error: "Failed to create transaction 🤯",
-          }
-        );
+          });
+        } else {
+          await toast.promise(
+            createTransaction(transactionData, selectedUserId),
+            {
+              pending: "Creating transaction...",
+              success: "Transaction created successfully 👌",
+              error: "Failed to create transaction 🤯",
+            }
+          );
+        }
 
-        // Clear form fields but keep modal open
         setFormData({ amount: "", category: "", type: "debit", vendor: "" });
         setFiles([]);
       }
@@ -488,104 +503,106 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="text-left text-sm font-medium text-gray-500 border-b border-gray-200">
-                  {[
-                    { field: "created_at", label: "Date" },
-                    { field: "amount", label: "Amount" },
-                    { field: "category", label: "Category" },
-                    { field: "type", label: "Type" },
-                    { field: "vendorname", label: "Vendor Name" },
-                    { field: "actions", label: "Actions" },
-                  ].map((header) => (
-                    <th
-                      key={header.field}
-                      className="px-4 py-3 hover:bg-gray-50"
-                    >
-                      <div className="flex items-center gap-1">
-                        {header.label}
-                        {header.field !== "actions" && (
-                          <>
-                            <ArrowUpDown
-                              className="w-4 h-4 cursor-pointer"
-                              onClick={() => handleSort(header.field)}
-                            />
-                            {sortField === header.field && (
-                              <span className="text-xs">
-                                ({sortDirection === "asc" ? "↑" : "↓"})
-                              </span>
-                            )}
-                          </>
-                        )}
-                      </div>
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {filteredTransactions.length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan="6"
-                      className="px-4 py-6 text-center text-gray-500"
-                    >
-                      {searchQuery
-                        ? "No matching transactions found"
-                        : "No transactions found"}
-                    </td>
-                  </tr>
-                ) : (
-                  filteredTransactions.map((txn) => (
-                    <tr
-                      key={txn.id}
-                      className="hover:bg-gray-50 transition-colors"
-                    >
-                      <td className="px-4 py-3 text-sm text-gray-900">
-                        {txn.created_at}
-                      </td>
-                      <td className="px-4 py-3 text-sm font-medium text-gray-900">
-                        {txn.amount}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-900">
-                        {txn.category}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-900 capitalize">
-                        {txn.type}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-900">
-                        {txn.vendorname}
-                      </td>
-                      <td className="px-4 py-3 text-sm">
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => setIsTransasctionLog(txn.id)}
-                            className="p-1 text-blue-600 hover:text-blue-800 rounded hover:bg-blue-50"
-                            title="Log"
-                          >
-                            <Logs className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => handleEdit(txn.id)}
-                            className="p-1 text-blue-600 hover:text-blue-800 rounded hover:bg-blue-50"
-                            title="Edit"
-                          >
-                            <Edit className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(txn.id)}
-                            className="p-1 text-red-600 hover:text-red-800 rounded hover:bg-red-50"
-                            title="Delete"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+            <div className="max-h-[calc(100vh-200px)] overflow-y-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="text-left text-sm font-medium text-gray-500 border-b border-gray-200">
+                    {[
+                      { field: "created_at", label: "Date" },
+                      { field: "amount", label: "Amount" },
+                      { field: "category", label: "Category" },
+                      { field: "type", label: "Type" },
+                      { field: "vendorname", label: "Vendor Name" },
+                      { field: "actions", label: "Actions" },
+                    ].map((header) => (
+                      <th
+                        key={header.field}
+                        className="px-4 py-3 hover:bg-gray-50"
+                      >
+                        <div className="flex items-center gap-1">
+                          {header.label}
+                          {header.field !== "actions" && (
+                            <>
+                              <ArrowUpDown
+                                className="w-4 h-4 cursor-pointer"
+                                onClick={() => handleSort(header.field)}
+                              />
+                              {sortField === header.field && (
+                                <span className="text-xs">
+                                  ({sortDirection === "asc" ? "↑" : "↓"})
+                                </span>
+                              )}
+                            </>
+                          )}
                         </div>
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {filteredTransactions.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan="6"
+                        className="px-4 py-6 text-center text-gray-500"
+                      >
+                        {searchQuery
+                          ? "No matching transactions found"
+                          : "No transactions found"}
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                  ) : (
+                    filteredTransactions.map((txn) => (
+                      <tr
+                        key={txn.id}
+                        className="hover:bg-gray-50 transition-colors"
+                      >
+                        <td className="px-4 py-3 text-sm text-gray-900">
+                          {txn.created_at}
+                        </td>
+                        <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                          {txn.amount}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-900">
+                          {txn.category}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-900 capitalize">
+                          {txn.type}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-900">
+                          {txn.vendorname}
+                        </td>
+                        <td className="px-4 py-3 text-sm">
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => setIsTransasctionLog(txn.id)}
+                              className="p-1 text-blue-600 hover:text-blue-800 rounded hover:bg-blue-50"
+                              title="Log"
+                            >
+                              <Logs className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleEdit(txn.id)}
+                              className="p-1 text-blue-600 hover:text-blue-800 rounded hover:bg-blue-50"
+                              title="Edit"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDelete(txn.id)}
+                              className="p-1 text-red-600 hover:text-red-800 rounded hover:bg-red-50"
+                              title="Delete"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>

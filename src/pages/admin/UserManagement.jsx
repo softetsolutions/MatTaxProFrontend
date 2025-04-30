@@ -175,134 +175,139 @@ export default function UserManagement({ role }) {
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="text-left text-sm font-medium text-gray-500 border-b border-gray-200">
-                {[
-                  { field: "name", label: "Name" },
-                  { field: "email", label: "Email" },
-                  { field: "phone", label: "Phone Number" },
-                  { field: "address", label: "Address" },
-                  { field: "actions", label: "Status" },
-                ].map((header) => (
-                  <th key={header.field} className="px-4 py-3 hover:bg-gray-50">
-                    <div className="flex items-center gap-1">
-                      {header.label}
-                      {header.field !== "actions" && (
-                        <>
-                          <ArrowUpDown
-                            className="w-4 h-4 cursor-pointer"
-                            onClick={() =>
-                              handleSort(
-                                role === "user"
-                                  ? `user_${header.field}`
-                                  : `accountant_${header.field}`
-                              )
-                            }
-                          />
-                          {sortField ===
-                            (role === "user"
-                              ? `user_${header.field}`
-                              : `accountant_${header.field}`) && (
-                            <span className="text-xs">
-                              ({sortDirection === "asc" ? "↑" : "↓"})
-                            </span>
-                          )}
-                        </>
-                      )}
-                    </div>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {sortedUsers.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={5}
-                    className="px-4 py-6 text-center text-gray-500"
-                  >
-                    No {role}s found
-                  </td>
-                </tr>
-              ) : (
-                sortedUsers.map((user) => (
-                  <tr
-                    key={role === "user" ? user.user_id : user.accountant_id}
-                    className={`hover:bg-gray-50 transition-colors ${
-                      user.locked_status === "locked" ? "bg-gray-50" : ""
-                    }`}
-                  >
-                    <td className="px-4 py-3 text-sm text-gray-900">
-                      {role === "user"
-                        ? `${user.user_fname} ${user.user_lname}`
-                        : `${user.accountant_fname} ${user.accountant_lname}`}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-900">
-                      {role === "user"
-                        ? user.user_email
-                        : user.accountant_email}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-900">
-                      {role === "user"
-                        ? user.user_phone || ""
-                        : user.accountant_phone || ""}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-900">
-                      {role === "user"
-                        ? user.user_address || ""
-                        : user.accountant_address || ""}
-                    </td>
-                    <td className="px-4 py-3 text-sm">
-                      <div className="relative group">
-                        <button
-                          onClick={() => handleToggleClick(user)}
-                          className={`relative flex items-center justify-between w-24 h-8 rounded-full transition-all duration-300 ${
-                            user.locked_status === "locked"
-                              ? "bg-red-100/80 hover:bg-red-100"
-                              : "bg-green-100/80 hover:bg-green-100"
-                          }`}
-                          aria-label={
-                            user.locked_status === "locked"
-                              ? `Lock ${role}`
-                              : `Unlock ${role}`
-                          }
-                        >
-                          <div
-                            className={`absolute left-1 top-1 w-6 h-6 rounded-full transition-all duration-300 flex items-center justify-center ${
-                              user.locked_status === "locked"
-                                ? "translate-x-0 bg-red-500"
-                                : "translate-x-16 bg-green-500"
-                            }`}
-                          >
-                            {user.locked_status === "locked" ? (
-                              <Lock className="w-3 h-3 text-white transition-all duration-300 group-hover:-rotate-3" />
-                            ) : (
-                              <Unlock className="w-3 h-3 text-white transition-all duration-300 group-hover:rotate-3" />
+          <div className="max-h-[calc(100vh-274px)] overflow-y-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="text-left text-sm font-medium text-gray-500 border-b border-gray-200">
+                  {[
+                    { field: "name", label: "Name" },
+                    { field: "email", label: "Email" },
+                    { field: "phone", label: "Phone Number" },
+                    { field: "address", label: "Address" },
+                    { field: "actions", label: "Status" },
+                  ].map((header) => (
+                    <th
+                      key={header.field}
+                      className="px-4 py-3 hover:bg-gray-50"
+                    >
+                      <div className="flex items-center gap-1">
+                        {header.label}
+                        {header.field !== "actions" && (
+                          <>
+                            <ArrowUpDown
+                              className="w-4 h-4 cursor-pointer"
+                              onClick={() =>
+                                handleSort(
+                                  role === "user"
+                                    ? `user_${header.field}`
+                                    : `accountant_${header.field}`
+                                )
+                              }
+                            />
+                            {sortField ===
+                              (role === "user"
+                                ? `user_${header.field}`
+                                : `accountant_${header.field}`) && (
+                              <span className="text-xs">
+                                ({sortDirection === "asc" ? "↑" : "↓"})
+                              </span>
                             )}
-                          </div>
-
-                          <div className="flex items-center justify-center w-full">
-                            <span
-                              className={`text-[10px] font-medium transition-all duration-300 whitespace-nowrap ${
-                                user.locked_status === "locked"
-                                  ? "text-red-600 ml-8"
-                                  : "text-green-600 mr-8"
-                              }`}
-                            >
-                              {user.locked_status === "locked"
-                                ? "Lock"
-                                : "Unlock"}
-                            </span>
-                          </div>
-                        </button>
+                          </>
+                        )}
                       </div>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {sortedUsers.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={5}
+                      className="px-4 py-6 text-center text-gray-500"
+                    >
+                      No {role}s found
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ) : (
+                  sortedUsers.map((user) => (
+                    <tr
+                      key={role === "user" ? user.user_id : user.accountant_id}
+                      className={`hover:bg-gray-50 transition-colors ${
+                        user.locked_status === "locked" ? "bg-gray-50" : ""
+                      }`}
+                    >
+                      <td className="px-4 py-3 text-sm text-gray-900">
+                        {role === "user"
+                          ? `${user.user_fname} ${user.user_lname}`
+                          : `${user.accountant_fname} ${user.accountant_lname}`}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-900">
+                        {role === "user"
+                          ? user.user_email
+                          : user.accountant_email}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-900">
+                        {role === "user"
+                          ? user.user_phone || ""
+                          : user.accountant_phone || ""}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-900">
+                        {role === "user"
+                          ? user.user_address || ""
+                          : user.accountant_address || ""}
+                      </td>
+                      <td className="px-4 py-3 text-sm">
+                        <div className="relative group">
+                          <button
+                            onClick={() => handleToggleClick(user)}
+                            className={`relative flex items-center justify-between w-24 h-8 rounded-full transition-all duration-300 ${
+                              user.locked_status === "locked"
+                                ? "bg-red-100/80 hover:bg-red-100"
+                                : "bg-green-100/80 hover:bg-green-100"
+                            }`}
+                            aria-label={
+                              user.locked_status === "locked"
+                                ? `Lock ${role}`
+                                : `Unlock ${role}`
+                            }
+                          >
+                            <div
+                              className={`absolute left-1 top-1 w-6 h-6 rounded-full transition-all duration-300 flex items-center justify-center ${
+                                user.locked_status === "locked"
+                                  ? "translate-x-0 bg-red-500"
+                                  : "translate-x-16 bg-green-500"
+                              }`}
+                            >
+                              {user.locked_status === "locked" ? (
+                                <Lock className="w-3 h-3 text-white transition-all duration-300 group-hover:-rotate-3" />
+                              ) : (
+                                <Unlock className="w-3 h-3 text-white transition-all duration-300 group-hover:rotate-3" />
+                              )}
+                            </div>
+
+                            <div className="flex items-center justify-center w-full">
+                              <span
+                                className={`text-[10px] font-medium transition-all duration-300 whitespace-nowrap ${
+                                  user.locked_status === "locked"
+                                    ? "text-red-600 ml-8"
+                                    : "text-green-600 mr-8"
+                                }`}
+                              >
+                                {user.locked_status === "locked"
+                                  ? "Locked"
+                                  : "Unlocked"}
+                              </span>
+                            </div>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>

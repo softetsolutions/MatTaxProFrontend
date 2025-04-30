@@ -166,84 +166,86 @@ export default function TransactionLog({
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-100">
         <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="text-left text-sm font-medium text-gray-500 border-b border-gray-200">
-                {[
-                  { field: "transaction_id", label: "Transaction ID" },
-                  { field: "changes", label: "Changes" },
-                  { field: "edited_by", label: "Edited By" },
-                  { field: "timestamp", label: "Timestamp" },
-                ].map((header) => (
-                  <th
-                    key={header.field}
-                    className="px-4 py-3 cursor-pointer"
-                    onClick={() => sortLogs(header.field)}
-                  >
-                    <div className="flex items-center gap-1">
-                      {header.label}
-                      <ArrowUpDown className="w-4 h-4" />
-                    </div>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {transactionLogs.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan="4"
-                    className="px-4 py-6 text-center text-gray-500"
-                  >
-                    No activity logs found
-                  </td>
+          <div className="max-h-[calc(100vh-300px)] overflow-y-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="text-left text-sm font-medium text-gray-500 border-b border-gray-200">
+                  {[
+                    { field: "transaction_id", label: "Transaction ID" },
+                    { field: "changes", label: "Changes" },
+                    { field: "edited_by", label: "Edited By" },
+                    { field: "timestamp", label: "Timestamp" },
+                  ].map((header) => (
+                    <th
+                      key={header.field}
+                      className="px-4 py-3 cursor-pointer"
+                      onClick={() => sortLogs(header.field)}
+                    >
+                      <div className="flex items-center gap-1">
+                        {header.label}
+                        <ArrowUpDown className="w-4 h-4" />
+                      </div>
+                    </th>
+                  ))}
                 </tr>
-              ) : (
-                transactionLogs.map((log, index) => (
-                  <tr key={index} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 text-sm text-blue-600 font-mono">
-                      #{log.transaction_id}
-                    </td>
-                    <td className="px-4 py-3 text-sm">
-                      <div className="flex flex-col gap-2">
-                        {log.changes.map((change, idx) => (
-                          <div
-                            key={idx}
-                            className={
-                              idx !== 0 ? "pt-2 border-t border-gray-100" : ""
-                            }
-                          >
-                            <span className="bg-purple-100 text-purple-800 px-2 py-0.5 rounded-full mr-2">
-                              {formatFieldName(change.field_changed)}
-                            </span>
-                            <span className="text-red-600">
-                              {change.old_value}
-                            </span>
-                            <ArrowRight className="inline w-4 h-4 text-gray-400 mx-1" />
-                            <span className="text-green-600">
-                              {change.new_value}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-900">
-                      <div className="flex items-center gap-2">
-                        <User className="w-4 h-4" />
-                        <span className="font-medium">{log.edited_by}</span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-500">
-                      <div className="flex items-center gap-2">
-                        <Clock className="w-4 h-4" />
-                        {new Date(log.timestamp).toLocaleString()}
-                      </div>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {transactionLogs.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan="4"
+                      className="px-4 py-6 text-center text-gray-500"
+                    >
+                      No activity logs found
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ) : (
+                  transactionLogs.map((log, index) => (
+                    <tr key={index} className="hover:bg-gray-50">
+                      <td className="px-4 py-3 text-sm text-blue-600 font-mono">
+                        #{log.transaction_id}
+                      </td>
+                      <td className="px-4 py-3 text-sm">
+                        <div className="flex flex-col gap-2">
+                          {log.changes.map((change, idx) => (
+                            <div
+                              key={idx}
+                              className={
+                                idx !== 0 ? "pt-2 border-t border-gray-100" : ""
+                              }
+                            >
+                              <span className="bg-purple-100 text-purple-800 px-2 py-0.5 rounded-full mr-2">
+                                {formatFieldName(change.field_changed)}
+                              </span>
+                              <span className="text-red-600">
+                                {change.old_value}
+                              </span>
+                              <ArrowRight className="inline w-4 h-4 text-gray-400 mx-1" />
+                              <span className="text-green-600">
+                                {change.new_value}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-900">
+                        <div className="flex items-center gap-2">
+                          <User className="w-4 h-4" />
+                          <span className="font-medium">{log.edited_by}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-500">
+                        <div className="flex items-center gap-2">
+                          <Clock className="w-4 h-4" />
+                          {new Date(log.timestamp).toLocaleString()}
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>

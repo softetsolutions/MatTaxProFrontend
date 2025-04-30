@@ -97,65 +97,70 @@ export default function Users() {
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="text-left text-sm font-medium text-gray-500 border-b border-gray-200">
-                {[
-                  { field: "fname", label: "First Name" },
-                  { field: "lname", label: "Last Name" },
-                  { field: "email", label: "Email" },
-                  { field: "phone", label: "Phone Number" },
-                ].map((header) => (
-                  <th key={header.field} className="px-4 py-3 hover:bg-gray-50">
-                    <div className="flex items-center gap-1">
-                      {header.label}
-                      <ArrowUpDown
-                        className="w-4 h-4 cursor-pointer"
-                        onClick={() => handleSort(header.field)}
-                      />
-                      {sortField === header.field && (
-                        <span className="text-xs">
-                          ({sortDirection === "asc" ? "↑" : "↓"})
-                        </span>
-                      )}
-                    </div>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {sortedUsers.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={5}
-                    className="px-4 py-6 text-center text-gray-500"
-                  >
-                    No users have been authorized yet
-                  </td>
+          <div className="max-h-[calc(100vh-300px)] overflow-y-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="text-left text-sm font-medium text-gray-500 border-b border-gray-200">
+                  {[
+                    { field: "fname", label: "First Name" },
+                    { field: "lname", label: "Last Name" },
+                    { field: "email", label: "Email" },
+                    { field: "phone", label: "Phone Number" },
+                  ].map((header) => (
+                    <th
+                      key={header.field}
+                      className="px-4 py-3 hover:bg-gray-50"
+                    >
+                      <div className="flex items-center gap-1">
+                        {header.label}
+                        <ArrowUpDown
+                          className="w-4 h-4 cursor-pointer"
+                          onClick={() => handleSort(header.field)}
+                        />
+                        {sortField === header.field && (
+                          <span className="text-xs">
+                            ({sortDirection === "asc" ? "↑" : "↓"})
+                          </span>
+                        )}
+                      </div>
+                    </th>
+                  ))}
                 </tr>
-              ) : (
-                sortedUsers.map((user) => (
-                  <tr
-                    key={user.id}
-                    className="hover:bg-gray-50 transition-colors"
-                  >
-                    <td className="px-4 py-3 text-sm text-gray-900">
-                      {user.fname}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-900">
-                      {user.lname}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-900">
-                      {user.email}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-900">
-                      {user.phone}
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {sortedUsers.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={5}
+                      className="px-4 py-6 text-center text-gray-500"
+                    >
+                      No users have been authorized yet
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ) : (
+                  sortedUsers.map((user) => (
+                    <tr
+                      key={user.id}
+                      className="hover:bg-gray-50 transition-colors"
+                    >
+                      <td className="px-4 py-3 text-sm text-gray-900">
+                        {user.fname}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-900">
+                        {user.lname}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-900">
+                        {user.email}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-900">
+                        {user.phone}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>

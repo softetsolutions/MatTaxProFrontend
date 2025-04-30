@@ -1,6 +1,5 @@
-import {getAuthInfo} from "./auth";
+import { getAuthInfo } from "./auth";
 import { handleUnauthoriz } from "./helperFunction";
-
 export const fetchTransactions = async (selectedUserId = null, navigate) => {
   try {
     const { token, userId, role } = getAuthInfo();
@@ -10,7 +9,9 @@ export const fetchTransactions = async (selectedUserId = null, navigate) => {
       if (!selectedUserId) {
         return [];
       }
-      url = `${import.meta.env.VITE_BASE_URL}/transaction?userId=${selectedUserId}&accountId=${userId}`;
+      url = `${
+        import.meta.env.VITE_BASE_URL
+      }/transaction?userId=${selectedUserId}&accountId=${userId}`;
     } else {
       url = `${import.meta.env.VITE_BASE_URL}/transaction?userId=${userId}`;
     }
@@ -40,7 +41,7 @@ export const fetchTransactions = async (selectedUserId = null, navigate) => {
   }
 };
 
-export const createTransaction = async (transactionData, selectedUserId = null) => {
+export const createTransaction = async (transactionData, selectedUserId) => {
   try {
     const { token, userId, role } = getAuthInfo();
 
@@ -49,7 +50,9 @@ export const createTransaction = async (transactionData, selectedUserId = null) 
       if (!selectedUserId) {
         throw new Error("No user selected for transaction creation");
       }
-      url = `${import.meta.env.VITE_BASE_URL}/transaction?userId=${selectedUserId}&accountId=${userId}`;
+      url = `${
+        import.meta.env.VITE_BASE_URL
+      }/transaction?userId=${selectedUserId}&accountId=${userId}`;
     } else {
       url = `${import.meta.env.VITE_BASE_URL}/transaction?userId=${userId}`;
     }
@@ -59,9 +62,14 @@ export const createTransaction = async (transactionData, selectedUserId = null) 
       credentials: "include",
       headers: {
         Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
+        ...(transactionData instanceof FormData
+          ? {}
+          : { "Content-Type": "application/json" }),
       },
-      body: JSON.stringify(transactionData),
+      body:
+        transactionData instanceof FormData
+          ? transactionData
+          : JSON.stringify(transactionData),
     });
 
     if (!response.ok) {
@@ -73,13 +81,17 @@ export const createTransaction = async (transactionData, selectedUserId = null) 
 
     const data = await response.json();
     return data;
-  } catch (err) {
-    console.error("Error creating transaction:", err);
-    throw err;
+  } catch (error) {
+    console.error("Error creating transaction:", error);
+    throw error;
   }
 };
 
-export const updateTransaction = async (transactionId, transactionData, selectedUserId = null) => {
+export const updateTransaction = async (
+  transactionId,
+  transactionData,
+  selectedUserId = null
+) => {
   try {
     const { token, userId, role } = getAuthInfo();
 
@@ -88,9 +100,13 @@ export const updateTransaction = async (transactionId, transactionData, selected
       if (!selectedUserId) {
         throw new Error("No user selected for transaction update");
       }
-      url = `${import.meta.env.VITE_BASE_URL}/transaction/update?userId=${selectedUserId}&accountId=${userId}`;
+      url = `${
+        import.meta.env.VITE_BASE_URL
+      }/transaction/update?userId=${selectedUserId}&accountId=${userId}`;
     } else {
-      url = `${import.meta.env.VITE_BASE_URL}/transaction/update?userId=${userId}`;
+      url = `${
+        import.meta.env.VITE_BASE_URL
+      }/transaction/update?userId=${userId}`;
     }
 
     const response = await fetch(url, {
@@ -122,7 +138,10 @@ export const updateTransaction = async (transactionId, transactionData, selected
   }
 };
 
-export const deleteTransaction = async (transactionId, selectedUserId = null) => {
+export const deleteTransaction = async (
+  transactionId,
+  selectedUserId = null
+) => {
   try {
     const { token, userId, role } = getAuthInfo();
 
@@ -131,9 +150,13 @@ export const deleteTransaction = async (transactionId, selectedUserId = null) =>
       if (!selectedUserId) {
         throw new Error("No user selected for transaction deletion");
       }
-      url = `${import.meta.env.VITE_BASE_URL}/transaction?userId=${selectedUserId}&accountId=${userId}&transactionId=${transactionId}`;
+      url = `${
+        import.meta.env.VITE_BASE_URL
+      }/transaction?userId=${selectedUserId}&accountId=${userId}&transactionId=${transactionId}`;
     } else {
-      url = `${import.meta.env.VITE_BASE_URL}/transaction?userId=${userId}&transactionId=${transactionId}`;
+      url = `${
+        import.meta.env.VITE_BASE_URL
+      }/transaction?userId=${userId}&transactionId=${transactionId}`;
     }
 
     const response = await fetch(url, {

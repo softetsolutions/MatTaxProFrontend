@@ -233,103 +233,114 @@ export default function BinPage() {
 
       <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
         <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="text-left text-sm font-medium text-gray-500 border-b border-gray-200">
-                {[
-                  // { field: "transactionId", label: "Transaction ID" },
-                  { field: "amount", label: "Amount" },
-                  { field: "category", label: "Category" },
-                  { field: "type", label: "Type" },
-                  { field: "actions", label: "Actions" },
-                ].map((header) => (
-                  <th key={header.field} className="px-4 py-3 hover:bg-gray-50">
-                    <div className="flex items-center gap-1">
-                      {header.label}
-                      {header.field !== "actions" && (
-                        <>
-                          <ArrowUpDown
-                            className="w-4 h-4 cursor-pointer"
-                            onClick={() => handleSort(header.field)}
-                          />
-                          {sortField === header.field && (
-                            <span className="text-xs">
-                              ({sortDirection === "asc" ? "↑" : "↓"})
-                            </span>
-                          )}
-                        </>
-                      )}
-                    </div>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {sortedTransactions.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={5}
-                    className="px-4 py-6 text-center text-gray-500"
-                  >
-                    <div className="flex flex-col items-center justify-center py-8">
-                      <div className="bg-gray-100 p-3 rounded-full mb-3">
-                        <Trash2 className="w-6 h-6 text-gray-400" />
-                      </div>
-                      <p className="text-gray-500 mb-1">Recycle bin is empty</p>
-                      <p className="text-sm text-gray-400">
-                        Deleted transactions will appear here
-                      </p>
-                    </div>
-                  </td>
-                </tr>
-              ) : (
-                sortedTransactions.map((transaction) => (
-                  <tr
-                    key={transaction.id}
-                    className="hover:bg-gray-50 transition-colors"
-                  >
-                    <td className="px-4 py-3 text-sm font-medium text-gray-900">
-                      {transaction.amount}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-900">
-                      {transaction.category}
-                    </td>
-                    <td className="px-4 py-3 text-sm">
-                      <div className="flex items-center gap-2">
-                        {transaction.type === "credit" ? (
-                          <div className="flex items-center gap-1.5 px-3 py-1 bg-green-100 text-green-800 rounded-full">
-                            <span className="font-medium text-xs">Credit</span>
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-1.5 px-3 py-1 bg-red-100 text-red-800 rounded-full">
-                            <span className="font-medium text-xs">Debit</span>
-                          </div>
+          <div className="max-h-[calc(100vh-200px)] overflow-y-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="text-left text-sm font-medium text-gray-500 border-b border-gray-200">
+                  {[
+                    // { field: "transactionId", label: "Transaction ID" },
+                    { field: "amount", label: "Amount" },
+                    { field: "category", label: "Category" },
+                    { field: "type", label: "Type" },
+                    { field: "actions", label: "Actions" },
+                  ].map((header) => (
+                    <th
+                      key={header.field}
+                      className="px-4 py-3 hover:bg-gray-50"
+                    >
+                      <div className="flex items-center gap-1">
+                        {header.label}
+                        {header.field !== "actions" && (
+                          <>
+                            <ArrowUpDown
+                              className="w-4 h-4 cursor-pointer"
+                              onClick={() => handleSort(header.field)}
+                            />
+                            {sortField === header.field && (
+                              <span className="text-xs">
+                                ({sortDirection === "asc" ? "↑" : "↓"})
+                              </span>
+                            )}
+                          </>
                         )}
                       </div>
-                    </td>
-                    <td className="px-4 py-3 text-sm">
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => handleRestore(transaction.id)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-md text-xs font-medium hover:cursor-pointer"
-                        >
-                          <RefreshCw className="w-3.5 h-3.5" />
-                          Restore
-                        </button>
-                        <button
-                          onClick={() => handlePermanentDelete(transaction.id)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 bg-red-100 text-red-700 hover:bg-red-200 rounded-md text-xs font-medium hover:cursor-pointer"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                          Delete
-                        </button>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {sortedTransactions.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={5}
+                      className="px-4 py-6 text-center text-gray-500"
+                    >
+                      <div className="flex flex-col items-center justify-center py-8">
+                        <div className="bg-gray-100 p-3 rounded-full mb-3">
+                          <Trash2 className="w-6 h-6 text-gray-400" />
+                        </div>
+                        <p className="text-gray-500 mb-1">
+                          Recycle bin is empty
+                        </p>
+                        <p className="text-sm text-gray-400">
+                          Deleted transactions will appear here
+                        </p>
                       </div>
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ) : (
+                  sortedTransactions.map((transaction) => (
+                    <tr
+                      key={transaction.id}
+                      className="hover:bg-gray-50 transition-colors"
+                    >
+                      <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                        {transaction.amount}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-900">
+                        {transaction.category}
+                      </td>
+                      <td className="px-4 py-3 text-sm">
+                        <div className="flex items-center gap-2">
+                          {transaction.type === "credit" ? (
+                            <div className="flex items-center gap-1.5 px-3 py-1 bg-green-100 text-green-800 rounded-full">
+                              <span className="font-medium text-xs">
+                                Credit
+                              </span>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-1.5 px-3 py-1 bg-red-100 text-red-800 rounded-full">
+                              <span className="font-medium text-xs">Debit</span>
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-sm">
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleRestore(transaction.id)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-md text-xs font-medium hover:cursor-pointer"
+                          >
+                            <RefreshCw className="w-3.5 h-3.5" />
+                            Restore
+                          </button>
+                          <button
+                            onClick={() =>
+                              handlePermanentDelete(transaction.id)
+                            }
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-red-100 text-red-700 hover:bg-red-200 rounded-md text-xs font-medium hover:cursor-pointer"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            Delete
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>
