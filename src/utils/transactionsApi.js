@@ -74,7 +74,7 @@ export const createTransaction = async (transactionData, selectedUserId) => {
 
     if (!response.ok) {
       if (response.status === 401) {
-        throw new Error("Unauthorized: Please check your authentication");
+        handleUnauthoriz();
       }
       throw new Error("Failed to create transaction");
     }
@@ -125,6 +125,7 @@ export const updateTransaction = async (
 
     if (!response.ok) {
       if (response.status === 401) {
+        handleUnauthoriz();
         throw new Error("Unauthorized: Please check your authentication");
       }
       throw new Error("Failed to update transaction");
@@ -170,7 +171,7 @@ export const deleteTransaction = async (
 
     if (!response.ok) {
       if (response.status === 401) {
-        throw new Error("Unauthorized: Please check your authentication");
+        handleUnauthoriz();
       }
       throw new Error("Failed to delete transaction");
     }

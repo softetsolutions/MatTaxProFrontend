@@ -1,5 +1,13 @@
 import { useState, useEffect, useRef } from "react";
-import { ArrowUpDown, Edit, Trash2, ChevronDown, X, Logs } from "lucide-react";
+import {
+  ArrowUpDown,
+  Edit,
+  Trash2,
+  ChevronDown,
+  X,
+  Logs,
+  Check,
+} from "lucide-react";
 import { jwtDecode } from "jwt-decode";
 // import { VendorList } from "../../utils/constant";
 // import axios from "axios";
@@ -13,7 +21,7 @@ import {
   updateTransaction,
   deleteTransaction,
 } from "../../utils/transactionsApi";
-import { fetchAllVendors } from "../../utils/vendorApi";
+import { fetchAllVendors, updateVendor } from "../../utils/vendorApi";
 import { downloadCSV } from "../../utils/convertAndDownloadCsv";
 
 export default function TransactionsPage({ setIsTransasctionLog }) {
@@ -46,6 +54,8 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
   const userRef = useRef(null);
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [editingVendorId, setEditingVendorId] = useState(null);
+  const [editingVendorName, setEditingVendorName] = useState("");
 
   console.log("vendorOptions", vendorOptions);
 
@@ -69,16 +79,36 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
   const categoryRef = useRef(null);
   const vendorRef = useRef(null);
 
+  // Initialize userRole once when component mounts
+  useEffect(() => {
+    const token = localStorage.getItem("userToken");
+    const decoded = jwtDecode(token);
+    setUserRole(decoded.role);
+  }, []);
+
+  // Fetch transaction data when selectedUserId changes
   useEffect(() => {
     const fetchTransactionData = async () => {
       try {
         setLoading(true);
         setError(null);
+        const token = localStorage.getItem("userToken");
+        const decoded = jwtDecode(token);
+        const userId = decoded.id;
+
+        // For accountants -> fetch vendors if user  selected
+        if (userRole === "accountant" && !selectedUserId) {
+          setTransactions([]);
+          setVendorOptions([]);
+          setLoading(false);
+          return;
+        }
+
         const data = await Promise.allSettled([
           fetchTransactions(selectedUserId, navigate),
-          fetchAllVendors(),
+          fetchAllVendors(userRole === "accountant" ? selectedUserId : userId),
         ]);
-        // console.log(data);
+
         const vendors = data[1].value.reduce((acc, vendor) => {
           let vendorData = {
             id: vendor.id,
@@ -101,13 +131,7 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
     };
 
     fetchTransactionData();
-  }, [refreshTableList, selectedUserId, navigate]);
-
-  useEffect(() => {
-    const token = localStorage.getItem("userToken");
-    const decoded = jwtDecode(token);
-    setUserRole(decoded.role);
-  }, []);
+  }, [refreshTableList, selectedUserId, navigate]); // Removed userRole from dependencies
 
   // Handle clicks outside of dropdowns
   useEffect(() => {
@@ -363,6 +387,23 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
       fetchAuthorizedUsersList();
     }
   }, [userRole]);
+
+  const handleVendorNameUpdate = async (vendorId, newName) => {
+    try {
+      await updateVendor(vendorId, newName);
+      setVendorOptions((prev) =>
+        prev.map((vendor) =>
+          vendor.id === vendorId ? { ...vendor, name: newName } : vendor
+        )
+      );
+      setEditingVendorId(null);
+      setEditingVendorName("");
+      toast.success("Vendor updated successfully");
+    } catch (err) {
+      console.error("Error updating vendor:", err);
+      toast.error(err.message || "Failed to update vendor");
+    }
+  };
 
   if (loading) {
     return (
@@ -720,62 +761,130 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
                 </div>
 
                 <div className="mb-4" ref={vendorRef}>
-                  <label
-                    className="block text-gray-700 text-sm font-bold mb-2"
-                    htmlFor="vendor"
-                  >
-                    Choose Vendor
+                  <label className="block text-gray-700 text-sm font-bold mb-2">
+                    Vendor
                   </label>
                   <div className="relative">
-                    <div
-                      className="flex items-center w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer bg-white"
-                      onClick={() => setShowVendorDropdown(!showVendorDropdown)}
-                    >
-                      <span className="flex-grow text-gray-700">
-                        {formData.vendor
-                          ? vendorOptions.find((v) => v.id === formData.vendor)
-                              ?.name || formData.vendor
-                          : "Select a vendor"}
-                      </span>
-                      <ChevronDown className="w-4 h-4 text-gray-400" />
-                    </div>
-
+                    <input
+                      type="text"
+                      name="vendor"
+                      value={formData.vendor}
+                      onChange={handleInputChange}
+                      className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
+                      placeholder="Select or type vendor name"
+                      onClick={() => setShowVendorDropdown(true)}
+                    />
+                    <ChevronDown
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 cursor-pointer"
+                      onClick={() => setShowVendorDropdown(true)}
+                    />
                     {showVendorDropdown && (
-                      <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded shadow-lg">
+                      <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded shadow-lg">
                         <div className="p-2 border-b">
-                          <div className="flex items-center border rounded bg-gray-50 text-black">
+                          <div className="flex items-center border rounded bg-gray-50">
                             <input
                               type="text"
                               value={vendorSearch}
                               onChange={(e) => setVendorSearch(e.target.value)}
-                              className="w-full p-2 bg-transparent focus:outline-none text-sm"
+                              className="w-full p-2 bg-transparent focus:outline-none text-sm text-black"
                               placeholder="Search vendors..."
                               autoFocus
                             />
                             {vendorSearch && (
                               <button
                                 onClick={() => setVendorSearch("")}
-                                className="mr-2"
+                                className="p-2"
                               >
                                 <X className="w-4 h-4 text-gray-400" />
                               </button>
                             )}
                           </div>
                         </div>
-                        <div className="max-h-60 overflow-y-auto text-black">
+                        <div className="max-h-60 overflow-y-auto">
                           {filteredVendors.length > 0 ? (
                             filteredVendors.map((vendor) => (
                               <div
                                 key={vendor.id}
-                                onClick={() => handleSelect("vendor", vendor)}
-                                className="px-4 py-2 hover:bg-blue-50 cursor-pointer"
+                                className="px-4 py-2 hover:bg-blue-50 cursor-pointer text-black flex justify-between items-center"
                               >
-                                {vendor.name}
+                                {editingVendorId === vendor.id ? (
+                                  <div className="flex items-center gap-2 w-full">
+                                    <input
+                                      type="text"
+                                      value={editingVendorName}
+                                      onChange={(e) =>
+                                        setEditingVendorName(e.target.value)
+                                      }
+                                      className="flex-grow p-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
+                                      onKeyDown={(e) => {
+                                        if (e.key === "Enter") {
+                                          handleVendorNameUpdate(
+                                            vendor.id,
+                                            editingVendorName
+                                          );
+                                        } else if (e.key === "Escape") {
+                                          setEditingVendorId(null);
+                                          setEditingVendorName("");
+                                        }
+                                      }}
+                                      autoFocus
+                                    />
+                                    <button
+                                      onClick={() =>
+                                        handleVendorNameUpdate(
+                                          vendor.id,
+                                          editingVendorName
+                                        )
+                                      }
+                                      className="p-1 text-green-600 hover:text-green-800 rounded hover:bg-green-50"
+                                      title="Save changes"
+                                    >
+                                      <Check className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                      onClick={() => {
+                                        setEditingVendorId(null);
+                                        setEditingVendorName("");
+                                      }}
+                                      className="p-1 text-red-600 hover:text-red-800 rounded hover:bg-red-50"
+                                      title="Cancel"
+                                    >
+                                      <X className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <>
+                                    <span
+                                      onClick={() => {
+                                        setFormData((prev) => ({
+                                          ...prev,
+                                          vendor: vendor.name,
+                                        }));
+                                        setShowVendorDropdown(false);
+                                        setVendorSearch("");
+                                      }}
+                                      className="flex-grow"
+                                    >
+                                      {vendor.name}
+                                    </span>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setEditingVendorId(vendor.id);
+                                        setEditingVendorName(vendor.name);
+                                      }}
+                                      className="p-1 text-blue-600 hover:text-blue-800 rounded hover:bg-blue-50"
+                                      title="Edit vendor name"
+                                    >
+                                      <Edit className="w-4 h-4" />
+                                    </button>
+                                  </>
+                                )}
                               </div>
                             ))
                           ) : (
                             <div className="p-2 text-gray-500 text-center">
-                              No results found
+                              No matching vendors found
                             </div>
                           )}
                         </div>
