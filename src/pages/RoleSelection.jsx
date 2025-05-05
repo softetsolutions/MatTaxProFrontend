@@ -6,7 +6,6 @@ export default function RoleSelection() {
   const navigate = useNavigate();
 
   const handleRoleSelect = (role) => {
-    console.log(`Selected role: ${role}`);
     navigate(`/register/${role}`);
   };
 

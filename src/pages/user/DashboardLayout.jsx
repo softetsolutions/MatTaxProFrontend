@@ -10,6 +10,7 @@ export default function DashboardLayout() {
   const navigate = useNavigate();
   const [pendingInvitationsCount, setPendingInvitationsCount] = useState(0);
 
+
   const decoded = jwtDecode(localStorage.getItem("userToken"));
   const navigation = decoded.allowedRoutes.filter((item) =>
     Object.keys(routeMapping).includes(item)
@@ -32,7 +33,6 @@ export default function DashboardLayout() {
     return () => clearInterval(interval);
   }, []);
 
-  console.log("navigation", jwtDecode(localStorage.getItem("userToken")));
 
   const handleLogOut = async () => {
     try {

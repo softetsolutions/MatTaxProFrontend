@@ -8,6 +8,9 @@ const convertToCSV = (data) => {
     jsonData = jsonData.map((value)=>{
       return {
         Date:value.created_at, 
+        TransactionDetail : value.desc3 ?? " - ",
+        SortCode: value.desc2 ?? " - ",
+        Account: value.desc1 ?? " - ",
         Amount: value.amount,
         Category:value.category,
         Type:value.type,

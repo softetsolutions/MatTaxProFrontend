@@ -14,12 +14,12 @@ import Accounts from "./pages/user/Accounts";
 import VerifyEmail from "./pages/VerifyEmail";
 import AllUsers from "./pages/admin/AllUsers";
 import AllAccountants from "./pages/admin/AllAccountants";
-import { jwtDecode } from "jwt-decode";
+import RenderAllUserOrTransactions from "./pages/user/RenderAllUsersOrTransactions";
+import VerifyByGoogle from "./pages/VerifyByGoogle";
+
 
 function App() {
-  const token = localStorage.getItem("userToken");
-  const decoded = token && jwtDecode(token);
-
+  
   return (
     <>
       <Routes>
@@ -28,6 +28,7 @@ function App() {
         <Route path="/signup" element={<RoleSelection />} />
         <Route path="/register/:role" element={<UserSignup />} />
         <Route path="/verifyEmail/:token" element={<VerifyEmail />} />
+        <Route path="/verifyByGoogle/" element={<VerifyByGoogle />} />
         {/* user */}
         <Route
           path="/dashboard"
@@ -39,26 +40,77 @@ function App() {
         >
           <Route
             path="transactions"
-            element={<RenderTransactionOrTransactionLog />}
+            element={
+              <ProtectRouteComp routeName={"transactions"}>
+                <RenderTransactionOrTransactionLog />
+              </ProtectRouteComp>
+            }
           />
           <Route
             index
             element={
-              <Navigate
-                to={decoded?.role === "admin" ? "allUsers" : "transactions"}
-                replace
-              />
+              <RenderAllUserOrTransactions/>
             }
           />
-          <Route path="addaccountant" element={<AccountantPage />} />
-          <Route path="users" element={<Users />} />
-          <Route path="bin" element={<Bin />} />
-          <Route path="invitations" element={<Invitation />} />
-          <Route path="accounts" element={<Accounts />} />
+          <Route
+            path="addaccountant"
+            element={
+              <ProtectRouteComp routeName={"addaccountant"}>
+                <AccountantPage />
+              </ProtectRouteComp>
+            }
+          />
+          <Route
+            path="users"
+            element={
+              <ProtectRouteComp routeName={"users"}>
+                <Users />
+              </ProtectRouteComp>
+            }
+          />
+          <Route
+            path="bin"
+            element={
+              <ProtectRouteComp routeName={"bin"}>
+                <Bin />
+              </ProtectRouteComp>
+            }
+          />
+          <Route
+            path="invitations"
+            element={
+              <ProtectRouteComp routeName={"invitations"}>
+                <Invitation />
+              </ProtectRouteComp>
+            }
+          />
+          {/* Below accounts route is for user profile Page*/}
+          <Route
+            path="accounts"
+            element={
+              <ProtectRouteComp routeName={"accounts"}>
+                <Accounts />
+              </ProtectRouteComp>
+            }
+          />
 
           {/* Admin Routes */}
-          <Route path="allUsers" element={<AllUsers />} />
-          <Route path="allAccountants" element={<AllAccountants />} />
+          <Route
+            path="allUsers"
+            element={
+              <ProtectRouteComp routeName={"allUsers"}>
+                <AllUsers />
+              </ProtectRouteComp>
+            }
+          />
+          <Route
+            path="allAccountants"
+            element={
+              <ProtectRouteComp routeName={"allAccountants"}>
+                <AllAccountants />
+              </ProtectRouteComp>
+            }
+          />
         </Route>
       </Routes>
     </>

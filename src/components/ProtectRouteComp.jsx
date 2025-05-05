@@ -22,7 +22,7 @@ function ProtectRouteComp({children, routeName}){
             navigate("/login");
         }
 
-    },[navigate])
+    },[navigate, routeName])
 
     const token = localStorage.getItem("userToken")
     if(!token) return null

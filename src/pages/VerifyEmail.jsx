@@ -7,7 +7,6 @@ function VerifyEmail() {
   const navigate = useNavigate()
 
   const param = useParams();
-  console.log("param", param);
 
   useEffect(() => {
     async function fetchData() {
