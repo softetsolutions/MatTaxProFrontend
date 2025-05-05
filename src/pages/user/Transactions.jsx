@@ -33,7 +33,7 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
     category: "",
     type: "moneyIn",
     vendor: "",
-    desc3:"",
+    desc3: "",
   });
   const [transactions, setTransactions] = useState([]);
   const [files, setFiles] = useState([]);
@@ -251,9 +251,15 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
           );
         }
 
-        setFormData({ amount: "", category: "", type: "moneyIn", vendor: "",desc3:"" });
+        setFormData({
+          amount: "",
+          category: "",
+          type: "moneyIn",
+          vendor: "",
+          desc3: "",
+        });
         setFiles([]);
-        setVendorSearch("")
+        setVendorSearch("");
       }
     } catch (err) {
       console.error("Operation failed:", err);
@@ -266,7 +272,13 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
   const handleCloseModal = () => {
     setShowModal(false);
     setEditingId(null);
-    setFormData({ amount: "", category: "", type: "moneyIn", vendor: "",desc3:"" });
+    setFormData({
+      amount: "",
+      category: "",
+      type: "moneyIn",
+      vendor: "",
+      desc3: "",
+    });
     setFiles([]);
     setRefreshTableList((prev) => !prev);
   };
@@ -326,16 +338,24 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
   );
 
   const handleSelect = (type, value) => {
-    setFormData((prev) => ({
-      ...prev,
-      [type]: type === "vendor" ? value.id : value,
-    }));
-    if (type === "category") {
-      setCategorySearch("");
-      setShowCategoryDropdown(false);
-    } else {
-      setVendorSearch("");
+    if (type === "vendor") {
+      setFormData((prev) => ({
+        ...prev,
+        vendor: value.id,
+      }));
+      setVendorSearch(value.name);
       setShowVendorDropdown(false);
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        [type]: value,
+      }));
+
+      if (type === "category") {
+        setShowCategoryDropdown(false);
+      } else {
+        setShowVendorDropdown(false);
+      }
     }
   };
 
@@ -392,7 +412,8 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
     }
   }, [userRole]);
 
-  const handleVendorNameUpdate = async (vendorId, newName) => {
+  const handleVendorNameUpdate = async (vendorId, newName, e) => {
+    if (e) e.preventDefault(); // Prevent form submission
     try {
       await updateVendor(vendorId, newName);
       setVendorOptions((prev) =>
@@ -894,170 +915,90 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
                           </div> */}
                         </div>
                         <div className="max-h-60 overflow-y-auto">
-                          {filteredVendors.length > 0
-                            ? filteredVendors.map((vendor) => (
-                                <div
-                                  key={vendor.id}
-                                  className="px-4 py-2 hover:bg-blue-50 cursor-pointer text-black flex justify-between items-center"
-                                >
-                                  {editingVendorId === vendor.id ? (
-                                    <div className="flex items-center gap-2 w-full">
-                                      <input
-                                        type="text"
-                                        value={editingVendorName}
-                                        onChange={(e) =>
-                                          setEditingVendorName(e.target.value)
-                                        }
-                                        className="flex-grow p-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
-                                        onKeyDown={(e) => {
-                                          if (e.key === "Enter") {
-                                            handleVendorNameUpdate(
-                                              vendor.id,
-                                              editingVendorName
-                                            );
-                                          } else if (e.key === "Escape") {
-                                            setEditingVendorId(null);
-                                            setEditingVendorName("");
-                                          }
-                                        }}
-                                        autoFocus
-                                      />
-                                      <button
-                                        onClick={() =>
+                          {filteredVendors.length > 0 ? (
+                            filteredVendors.map((vendor) => (
+                              <div
+                                key={vendor.id}
+                                className="px-4 py-2 hover:bg-blue-50 cursor-pointer text-black flex justify-between items-center"
+                              >
+                                {editingVendorId === vendor.id ? (
+                                  <div className="flex items-center gap-2 w-full">
+                                    <input
+                                      type="text"
+                                      value={editingVendorName}
+                                      onChange={(e) =>
+                                        setEditingVendorName(e.target.value)
+                                      }
+                                      className="flex-grow p-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
+                                      onKeyDown={(e) => {
+                                        if (e.key === "Enter") {
                                           handleVendorNameUpdate(
                                             vendor.id,
                                             editingVendorName
-                                          )
-                                        }
-                                        className="p-1 text-green-600 hover:text-green-800 rounded hover:bg-green-50"
-                                        title="Save changes"
-                                      >
-                                        <Check className="w-4 h-4" />
-                                      </button>
-                                      <button
-                                        onClick={() => {
+                                          );
+                                        } else if (e.key === "Escape") {
                                           setEditingVendorId(null);
                                           setEditingVendorName("");
-                                        }}
-                                        className="p-1 text-red-600 hover:text-red-800 rounded hover:bg-red-50"
-                                        title="Cancel"
-                                      >
-                                        <X className="w-4 h-4" />
-                                      </button>
-                                    </div>
-                                  ) : (
-                                    <>
-                                      <span
-                                        onClick={() => {
-                                          setFormData((prev) => ({
-                                            ...prev,
-                                            vendor: vendor.name,
-                                          }));
-                                          setShowVendorDropdown(false);
-                                          setVendorSearch("");
-                                        }}
-                                        className="flex-grow"
-                                      >
-                                        {vendor.name}
-                                      </span>
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          setEditingVendorId(vendor.id);
-                                          setEditingVendorName(vendor.name);
-                                        }}
-                                        className="p-1 text-blue-600 hover:text-blue-800 rounded hover:bg-blue-50"
-                                        title="Edit vendor name"
-                                      >
-                                        <Edit className="w-4 h-4" />
-                                      </button>
-                                    </>
-                                  )}
-                                </div>
-                              ))
-                            : null}
-                          {filteredVendors.length > 0
-                            ? filteredVendors.map((vendor) => (
-                                <div
-                                  key={vendor.id}
-                                  className="px-4 py-2 hover:bg-blue-50 cursor-pointer text-black flex justify-between items-center"
-                                >
-                                  {editingVendorId === vendor.id ? (
-                                    <div className="flex items-center gap-2 w-full">
-                                      <input
-                                        type="text"
-                                        value={editingVendorName}
-                                        onChange={(e) =>
-                                          setEditingVendorName(e.target.value)
                                         }
-                                        className="flex-grow p-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
-                                        onKeyDown={(e) => {
-                                          if (e.key === "Enter") {
-                                            handleVendorNameUpdate(
-                                              vendor.id,
-                                              editingVendorName
-                                            );
-                                          } else if (e.key === "Escape") {
-                                            setEditingVendorId(null);
-                                            setEditingVendorName("");
-                                          }
-                                        }}
-                                        autoFocus
-                                      />
-                                      <button
-                                        onClick={() =>
-                                          handleVendorNameUpdate(
-                                            vendor.id,
-                                            editingVendorName
-                                          )
-                                        }
-                                        className="p-1 text-green-600 hover:text-green-800 rounded hover:bg-green-50"
-                                        title="Save changes"
-                                      >
-                                        <Check className="w-4 h-4" />
-                                      </button>
-                                      <button
-                                        onClick={() => {
-                                          setEditingVendorId(null);
-                                          setEditingVendorName("");
-                                        }}
-                                        className="p-1 text-red-600 hover:text-red-800 rounded hover:bg-red-50"
-                                        title="Cancel"
-                                      >
-                                        <X className="w-4 h-4" />
-                                      </button>
-                                    </div>
-                                  ) : (
-                                    <>
-                                      <span
-                                        onClick={() => {
-                                          setFormData((prev) => ({
-                                            ...prev,
-                                            vendor: vendor.name,
-                                          }));
-                                          setShowVendorDropdown(false);
-                                          setVendorSearch("");
-                                        }}
-                                        className="flex-grow"
-                                      >
-                                        {vendor.name}
-                                      </span>
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          setEditingVendorId(vendor.id);
-                                          setEditingVendorName(vendor.name);
-                                        }}
-                                        className="p-1 text-blue-600 hover:text-blue-800 rounded hover:bg-blue-50"
-                                        title="Edit vendor name"
-                                      >
-                                        <Edit className="w-4 h-4" />
-                                      </button>
-                                    </>
-                                  )}
-                                </div>
-                              ))
-                            : null}
+                                      }}
+                                      autoFocus
+                                    />
+                                    <button
+                                      onClick={() =>
+                                        handleVendorNameUpdate(
+                                          vendor.id,
+                                          editingVendorName
+                                        )
+                                      }
+                                      className="p-1 text-green-600 hover:text-green-800 rounded hover:bg-green-50"
+                                      title="Save changes"
+                                      type="button"
+                                    >
+                                      <Check className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                      onClick={() => {
+                                        setEditingVendorId(null);
+                                        setEditingVendorName("");
+                                      }}
+                                      className="p-1 text-red-600 hover:text-red-800 rounded hover:bg-red-50"
+                                      title="Cancel"
+                                    >
+                                      <X className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <>
+                                    <span
+                                      onClick={() =>
+                                        handleSelect("vendor", vendor)
+                                      }
+                                      className="flex-grow"
+                                    >
+                                      {vendor.name}
+                                    </span>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setEditingVendorId(vendor.id);
+                                        setEditingVendorName(vendor.name);
+                                      }}
+                                      className="p-1 text-blue-600 hover:text-blue-800 rounded hover:bg-blue-50"
+                                      title="Edit vendor name"
+                                    >
+                                      <Edit className="w-4 h-4" />
+                                    </button>
+                                  </>
+                                )}
+                              </div>
+                            ))
+                          ) : (
+                            <div className="p-2 text-gray-500 text-center">
+                              {vendorSearch
+                                ? "No vendors found"
+                                : "No vendors available"}
+                            </div>
+                          )}
                         </div>
                       </div>
                     )}
