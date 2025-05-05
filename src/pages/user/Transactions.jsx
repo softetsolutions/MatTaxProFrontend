@@ -263,6 +263,11 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
     }
   };
 
+  const closeUploadModalCsvOpen = () => {
+    setIsUploadModalCsvOpen(false)
+    setRefreshTableList((prev) => !prev)
+  }
+
   const handleCloseModal = () => {
     setShowModal(false);
     setEditingId(null);
@@ -1094,7 +1099,7 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
 
       {isUploadModalCsvOpen && (
         <UploadCsv
-          closeUploadModalCsvOpen={() => setIsUploadModalCsvOpen(false)}
+          closeUploadModalCsvOpen={closeUploadModalCsvOpen}
         />
       )}
     </div>

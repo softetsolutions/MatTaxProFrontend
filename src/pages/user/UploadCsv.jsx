@@ -2,20 +2,22 @@ import { toast } from "react-toastify";
 import { csvToJson } from "../../utils/helperFunction";
 import { useState } from "react";
 
+const intialMapList = {
+  created_at: "",
+  transactionDetail: "",
+  accountNo: "",
+  sortCode: "",
+  balance: "",
+  moneyIn: "",
+  moneyOut: "",
+  moneyInAndMoneyOut: "",
+}
+
 export default function UploadCsv({ closeUploadModalCsvOpen }) {
   const [jsonData, setJsonData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [file, setFile] = useState(null);
-  const [mapingList, setMapingList] = useState({
-    created_at: "",
-    transactionDetail: "",
-    accountNo: "",
-    sortCode: "",
-    balance: "",
-    moneyIn: "",
-    moneyOut: "",
-    moneyInAndMoneyOut: "",
-  });
+  const [mapingList, setMapingList] = useState(intialMapList);
 
   function getSelectedField(index) {
     return (
@@ -23,6 +25,11 @@ export default function UploadCsv({ closeUploadModalCsvOpen }) {
         ([, mappedIndex]) => mappedIndex === `${index}`
       )?.[0] || ""
     );
+  }
+
+  function handleReset(){
+    setJsonData([]);
+    setMapingList(intialMapList);
   }
 
   // Handle mapping assignment
@@ -94,16 +101,7 @@ export default function UploadCsv({ closeUploadModalCsvOpen }) {
         if (response.ok) {
           setFile(null);
           setJsonData([]);
-          setMapingList({
-            created_at: "",
-            transactionDetail: "",
-            accountNo: "",
-            sortCode: "",
-            balance: "",
-            moneyIn: "",
-            moneyOut: "",
-            moneyInAndMoneyOut: "",
-          });
+          setMapingList(intialMapList);
           toast.success("Csv imported successfully");
         } else {
           throw new Error("Please try again");
@@ -231,7 +229,7 @@ export default function UploadCsv({ closeUploadModalCsvOpen }) {
           <button
             type="button"
             disabled={loading}
-            onClick={() => setJsonData([])}
+            onClick={handleReset}
             className={`px-4 py-2 text-gray-600 border-2 bg-red-100 border-red-300 rounded hover:bg-red-200 transition-colors hover:cursor-pointer ${
               loading ? "opacity-50 cursor-not-allowed" : "hover:text-red-600"
             } `}

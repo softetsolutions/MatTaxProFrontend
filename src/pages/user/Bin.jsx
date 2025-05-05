@@ -10,6 +10,8 @@ export default function BinPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+
+
   useEffect(() => {
     const fetchDeletedTransactions = async () => {
       try {
@@ -302,15 +304,15 @@ export default function BinPage() {
                       </td>
                       <td className="px-4 py-3 text-sm">
                         <div className="flex items-center gap-2">
-                          {transaction.type === "credit" ? (
+                          {transaction.type === "moneyIn" ? (
                             <div className="flex items-center gap-1.5 px-3 py-1 bg-green-100 text-green-800 rounded-full">
                               <span className="font-medium text-xs">
-                                Credit
+                              Money In
                               </span>
                             </div>
                           ) : (
                             <div className="flex items-center gap-1.5 px-3 py-1 bg-red-100 text-red-800 rounded-full">
-                              <span className="font-medium text-xs">Debit</span>
+                              <span className="font-medium text-xs">Money Out</span>
                             </div>
                           )}
                         </div>
