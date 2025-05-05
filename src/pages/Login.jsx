@@ -142,6 +142,8 @@ export default function LoginPage() {
 
   const handleSocialLogin = async (provider) => {
     console.log("provider",provider)
+    if(provider === "facebook" || provider === "x") return
+
     setSocialLoginLoading((prev) => ({ ...prev, [provider]: true }));
     // setError("");
 
@@ -319,8 +321,8 @@ export default function LoginPage() {
                     <button
                       key={name}
                       onClick={() => handleSocialLogin(name)}
-                      disabled={socialLoginLoading[name]}
-                      className="w-full flex items-center justify-center p-3 bg-zinc-800 rounded-lg border border-zinc-700 hover:bg-zinc-700 transition-all hover:cursor-pointer"
+                      disabled={socialLoginLoading[name] || name === "facebook" || name === "x"}
+                      className={`w-full flex items-center justify-center p-3 bg-zinc-800 rounded-lg border border-zinc-700 ${(name === "facebook" || name === "x") ? 'hover:cursor-not-allowed' : 'hover:cursor-pointer'} hover:bg-zinc-700 transition-all`}
                     >
                       {socialLoginLoading[name] ? spinner : icon}
                     </button>
