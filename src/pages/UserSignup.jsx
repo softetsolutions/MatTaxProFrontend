@@ -87,7 +87,6 @@ export default function UserSignupPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    console.log("handleSubmit is running", import.meta.env.VITE_BASE_URL);
 
     // if (!validateForm()) return;
 

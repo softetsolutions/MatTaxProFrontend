@@ -96,10 +96,10 @@ export default function LoginPage() {
     e.preventDefault();
     setError("");
     
-    // if (!recaptchaToken) {
-    //   setError("Please complete the reCAPTCHA verification.");
-    //   return;
-    // }
+    if (!recaptchaToken) {
+      setError("Please complete the reCAPTCHA verification.");
+      return;
+    }
 
     setIsLoading(true);
 
@@ -125,7 +125,6 @@ export default function LoginPage() {
         throw new Error(errorData.message || "Error logging in");
       }
       user = await user.json();
-      console.log("user",user)
       localStorage.setItem("userToken", user.data);
       toast.success("Wohha logged in successfully!");
       navigate("/dashboard");
@@ -142,13 +141,17 @@ export default function LoginPage() {
   };
 
   const handleSocialLogin = async (provider) => {
+    console.log("provider",provider)
     setSocialLoginLoading((prev) => ({ ...prev, [provider]: true }));
-    setError("");
+    // setError("");
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-      console.log(`Logging in with ${provider}`);
-      navigate("/dashboard");
+      // const res = await fetch(
+      //   `${import.meta.env.VITE_BASE_URL}/auth/google`
+      // );
+      // navigate(`${import.meta.env.VITE_BASE_URL}/auth/google`);
+      window.location.href =`${import.meta.env.VITE_BASE_URL}/auth/google`
+      
     } catch {
       setError(`Failed to login with ${provider}. Please try again.`);
     } finally {

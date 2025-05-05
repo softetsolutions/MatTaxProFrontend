@@ -64,7 +64,6 @@ export default function TransactionLog({
         );
         response = await response.json();
         setTransactionLogs(response);
-        console.log("response", response);
       } catch (err) {
         setError(err.message || "Failed to fetch transactions");
         console.error("API Error:", err);

@@ -9,8 +9,6 @@ import {
   Check,
 } from "lucide-react";
 import { jwtDecode } from "jwt-decode";
-// import { VendorList } from "../../utils/constant";
-// import axios from "axios";
 import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
 import { handleUnauthoriz } from "../../utils/helperFunction";
@@ -23,6 +21,7 @@ import {
 } from "../../utils/transactionsApi";
 import { fetchAllVendors, updateVendor } from "../../utils/vendorApi";
 import { downloadCSV } from "../../utils/convertAndDownloadCsv";
+import UploadCsv from "./UploadCsv";
 
 export default function TransactionsPage({ setIsTransasctionLog }) {
   const [sortField, setSortField] = useState("date");
@@ -32,8 +31,9 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
   const [formData, setFormData] = useState({
     amount: "",
     category: "",
-    type: "debit",
+    type: "moneyIn",
     vendor: "",
+    desc3:"",
   });
   const [transactions, setTransactions] = useState([]);
   const [files, setFiles] = useState([]);
@@ -56,8 +56,7 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingVendorId, setEditingVendorId] = useState(null);
   const [editingVendorName, setEditingVendorName] = useState("");
-
-  console.log("vendorOptions", vendorOptions);
+  const [isUploadModalCsvOpen, setIsUploadModalCsvOpen] = useState(false);
 
   // dropdown options
   const categoryOptions = [
@@ -68,14 +67,6 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
     "Transport",
     "Other",
   ];
-  // const vendorOptions = [
-  //   { id: "5", name: "Dmart" },
-  //   { id: "2", name: "Flipkart" },
-  //   { id: "8", name: "Chadstone Shopping Centre" },
-  //   { id: "34", name: "Westfield Fountain Gate" },
-  // ];
-
-  // Refs for dropdowns
   const categoryRef = useRef(null);
   const vendorRef = useRef(null);
 
@@ -186,8 +177,19 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
 
   const handleSubmit = async (e) => {
     if (e) e.preventDefault();
-    setIsSubmitting(true);
+    const isEveryDataPresent = Object.values(formData).reduce((acc, value) => {
+      if (acc) {
+        acc = Boolean(value);
+      }
+      return acc;
+    }, true);
 
+    if (!isEveryDataPresent) {
+      toast.warning("Pls fill all the field");
+      return;
+    }
+
+    setIsSubmitting(true);
     try {
       if (editingId) {
         // Update existing transaction
@@ -219,6 +221,7 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
           category: formData.category,
           type: formData.type,
           vendorId: formData.vendor,
+          desc3: formData.desc3,
           isdeleted: false,
           userid: userRole === "accountant" ? selectedUserId : userId,
         };
@@ -248,8 +251,9 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
           );
         }
 
-        setFormData({ amount: "", category: "", type: "debit", vendor: "" });
+        setFormData({ amount: "", category: "", type: "moneyIn", vendor: "",desc3:"" });
         setFiles([]);
+        setVendorSearch("")
       }
     } catch (err) {
       console.error("Operation failed:", err);
@@ -262,7 +266,7 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
   const handleCloseModal = () => {
     setShowModal(false);
     setEditingId(null);
-    setFormData({ amount: "", category: "", type: "debit", vendor: "" });
+    setFormData({ amount: "", category: "", type: "moneyIn", vendor: "",desc3:"" });
     setFiles([]);
     setRefreshTableList((prev) => !prev);
   };
@@ -516,6 +520,15 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
 
               <button
                 onClick={() => {
+                  setIsUploadModalCsvOpen(true);
+                }}
+                className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md transition-colors hover:cursor-pointer"
+              >
+                Add Transaction(via Csv)
+              </button>
+
+              <button
+                onClick={() => {
                   downloadCSV(transactions);
                 }}
                 disabled={transactions.length === 0}
@@ -550,6 +563,9 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
                   <tr className="text-left text-sm font-medium text-gray-500 border-b border-gray-200">
                     {[
                       { field: "created_at", label: "Date" },
+                      { field: "Desc3", label: "Transaction Detail" },
+                      { field: "Desc2", label: "SortCode" },
+                      { field: "Desc1", label: "Account" },
                       { field: "amount", label: "Amount" },
                       { field: "category", label: "Category" },
                       { field: "type", label: "Type" },
@@ -600,6 +616,15 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
                       >
                         <td className="px-4 py-3 text-sm text-gray-900">
                           {txn.created_at}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-900">
+                          {txn.desc3 ?? " - "}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-900">
+                          {txn.desc2 ?? " - "}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-900">
+                          {txn.desc1 ?? " - "}
                         </td>
                         <td className="px-4 py-3 text-sm font-medium text-gray-900">
                           {txn.amount}
@@ -668,9 +693,31 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
               className="flex flex-col md:flex-row gap-6"
             >
               <div className="flex-1">
-                <h4 className="font-medium text-gray-700 mb-3">
+                {/* <h4 className="font-medium text-gray-700 mb-3">
                   Transaction Details
-                </h4>
+                </h4> */}
+
+                <div className="mb-4">
+                  <label
+                    className="block text-gray-700 text-sm font-bold mb-2"
+                    htmlFor="amount"
+                  >
+                    Transaction Details
+                  </label>
+                  <input
+                    type="text"
+                    id="desc3"
+                    name="desc3"
+                    value={formData.desc3}
+                    onChange={handleInputChange}
+                    className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
+                    placeholder="Enter Detail"
+                    required
+                    step="0.01"
+                    min="0"
+                  />
+                </div>
+
                 <div className="mb-4">
                   <label
                     className="block text-gray-700 text-sm font-bold mb-2"
@@ -798,10 +845,25 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
                     {showVendorDropdown && (
                       <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded shadow-lg">
                         <div className="p-2 border-b">
-                          <div className="flex items-center border rounded bg-gray-50">
+                          {/* <div className="flex items-center border rounded bg-gray-50">
                             <input
                               type="text"
                               value={vendorSearch}
+                              onChange={(e) => {
+                                setVendorSearch(e.target.value);
+                                if (
+                                  !filteredVendors.some(
+                                    (v) =>
+                                      v.name.toLowerCase() ===
+                                      e.target.value.toLowerCase()
+                                  )
+                                ) {
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    vendor: e.target.value,
+                                  }));
+                                }
+                              }}
                               onChange={(e) => {
                                 setVendorSearch(e.target.value);
                                 if (
@@ -829,9 +891,91 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
                                 <X className="w-4 h-4 text-gray-400" />
                               </button>
                             )}
-                          </div>
+                          </div> */}
                         </div>
                         <div className="max-h-60 overflow-y-auto">
+                          {filteredVendors.length > 0
+                            ? filteredVendors.map((vendor) => (
+                                <div
+                                  key={vendor.id}
+                                  className="px-4 py-2 hover:bg-blue-50 cursor-pointer text-black flex justify-between items-center"
+                                >
+                                  {editingVendorId === vendor.id ? (
+                                    <div className="flex items-center gap-2 w-full">
+                                      <input
+                                        type="text"
+                                        value={editingVendorName}
+                                        onChange={(e) =>
+                                          setEditingVendorName(e.target.value)
+                                        }
+                                        className="flex-grow p-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
+                                        onKeyDown={(e) => {
+                                          if (e.key === "Enter") {
+                                            handleVendorNameUpdate(
+                                              vendor.id,
+                                              editingVendorName
+                                            );
+                                          } else if (e.key === "Escape") {
+                                            setEditingVendorId(null);
+                                            setEditingVendorName("");
+                                          }
+                                        }}
+                                        autoFocus
+                                      />
+                                      <button
+                                        onClick={() =>
+                                          handleVendorNameUpdate(
+                                            vendor.id,
+                                            editingVendorName
+                                          )
+                                        }
+                                        className="p-1 text-green-600 hover:text-green-800 rounded hover:bg-green-50"
+                                        title="Save changes"
+                                      >
+                                        <Check className="w-4 h-4" />
+                                      </button>
+                                      <button
+                                        onClick={() => {
+                                          setEditingVendorId(null);
+                                          setEditingVendorName("");
+                                        }}
+                                        className="p-1 text-red-600 hover:text-red-800 rounded hover:bg-red-50"
+                                        title="Cancel"
+                                      >
+                                        <X className="w-4 h-4" />
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <>
+                                      <span
+                                        onClick={() => {
+                                          setFormData((prev) => ({
+                                            ...prev,
+                                            vendor: vendor.name,
+                                          }));
+                                          setShowVendorDropdown(false);
+                                          setVendorSearch("");
+                                        }}
+                                        className="flex-grow"
+                                      >
+                                        {vendor.name}
+                                      </span>
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setEditingVendorId(vendor.id);
+                                          setEditingVendorName(vendor.name);
+                                        }}
+                                        className="p-1 text-blue-600 hover:text-blue-800 rounded hover:bg-blue-50"
+                                        title="Edit vendor name"
+                                      >
+                                        <Edit className="w-4 h-4" />
+                                      </button>
+                                    </>
+                                  )}
+                                </div>
+                              ))
+                            : null}
                           {filteredVendors.length > 0
                             ? filteredVendors.map((vendor) => (
                                 <div
@@ -929,23 +1073,23 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
                       <input
                         type="radio"
                         name="type"
-                        value="debit"
-                        checked={formData.type === "debit"}
+                        value="moneyIn"
+                        checked={formData.type === "moneyIn"}
                         onChange={handleInputChange}
                         className="form-radio h-4 w-4 text-blue-600"
                       />
-                      <span className="ml-2 text-gray-700">Debit</span>
+                      <span className="ml-2 text-gray-700">Money In</span>
                     </label>
                     <label className="inline-flex items-center">
                       <input
                         type="radio"
                         name="type"
-                        value="credit"
-                        checked={formData.type === "credit"}
+                        value="moneyOut"
+                        checked={formData.type === "moneyOut"}
                         onChange={handleInputChange}
                         className="form-radio h-4 w-4 text-blue-600"
                       />
-                      <span className="ml-2 text-gray-700">Credit</span>
+                      <span className="ml-2 text-gray-700">Money Out</span>
                     </label>
                   </div>
                 </div>
@@ -1043,6 +1187,12 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
             </div>
           </div>
         </div>
+      )}
+
+      {isUploadModalCsvOpen && (
+        <UploadCsv
+          closeUploadModalCsvOpen={() => setIsUploadModalCsvOpen(false)}
+        />
       )}
     </div>
   );
