@@ -26,7 +26,10 @@ export const fetchUserDetails = async () => {
       lastName: data.lname,
       email: data.email,
       phone: data.phone,
-      address: data.address,
+      addressLine1: data.address_line1,
+      city: data.city,
+      postcode: data.postcode,
+      country: data.country,
     };
   } catch (error) {
     console.error("Error fetching user details:", error);
@@ -50,7 +53,10 @@ export const updateUserDetails = async (userData) => {
           fname: userData.firstName,
           lname: userData.lastName,
           phone: userData.phone,
-          address: userData.address,
+          address_line1: userData.addressLine1,
+          city: userData.city,
+          postcode: userData.postcode,
+          country: userData.country,
         }),
       }
     );
@@ -66,7 +72,10 @@ export const updateUserDetails = async (userData) => {
       lastName: data.lname,
       email: data.email,
       phone: data.phone,
-      address: data.address,
+      addressLine1: data.address_line1,
+      city: data.city,
+      postcode: data.postcode,
+      country: data.country,
     };
   } catch (error) {
     console.error("Error updating user details:", error);

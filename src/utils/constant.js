@@ -2,11 +2,11 @@ import { History, User, Trash2, Mail, UserRoundPlus } from "lucide-react";
 
 export const routeMapping = {
   transactions: "Transactions",
-  addaccountant: "Add Accountant",
+  addaccountant: "Authorise Accountant",
   users: "Users",
   bin: "Bin",
   invitations: "Invitations",
-  accounts: "Accounts",
+  accounts: "Profile",
   allUsers: "All Users",
   allAccountants: "All Accountants"
 };

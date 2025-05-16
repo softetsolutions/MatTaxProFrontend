@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ArrowUpDown, Lock, Unlock } from "lucide-react";
+import { ArrowUpDown, Lock, Unlock, Search } from "lucide-react";
 import {
   fetchAllUsers,
   fetchAllAccountants,
@@ -20,6 +20,7 @@ export default function UserManagement({ role }) {
   const [error, setError] = useState(null);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -90,26 +91,37 @@ export default function UserManagement({ role }) {
     setSelectedUser(null);
   };
 
-  const sortedUsers = [...users].sort((a, b) => {
-    const modifier = sortDirection === "asc" ? 1 : -1;
-    const fields =
-      role === "user"
-        ? ["user_fname", "user_lname", "user_email", "user_phone"]
-        : [
-            "accountant_fname",
-            "accountant_lname",
-            "accountant_email",
-            "accountant_phone",
-          ];
-
-    if (fields.includes(sortField)) {
+  const sortedUsers = [...users]
+    .filter((user) => {
+      if (!searchTerm) return true;
+      const lowerSearchTerm = searchTerm.toLowerCase();
+      const fname = role === "user" ? user.user_fname : user.accountant_fname;
+      const lname = role === "user" ? user.user_lname : user.accountant_lname;
       return (
-        String(a[sortField] || "").localeCompare(String(b[sortField] || "")) *
-        modifier
+        fname?.toLowerCase().includes(lowerSearchTerm) ||
+        lname?.toLowerCase().includes(lowerSearchTerm)
       );
-    }
-    return 0;
-  });
+    })
+    .sort((a, b) => {
+      const modifier = sortDirection === "asc" ? 1 : -1;
+      const fields =
+        role === "user"
+          ? ["user_fname", "user_lname", "user_email", "user_phone"]
+          : [
+              "accountant_fname",
+              "accountant_lname",
+              "accountant_email",
+              "accountant_phone",
+            ];
+
+      if (fields.includes(sortField)) {
+        return (
+          String(a[sortField] || "").localeCompare(String(b[sortField] || "")) *
+          modifier
+        );
+      }
+      return 0;
+    });
 
   if (loading) {
     return (
@@ -141,6 +153,18 @@ export default function UserManagement({ role }) {
             {role === "user" ? "User" : "Accountant"} Management
           </h1>
           <p className="text-sm text-gray-500">View and manage all {role}s</p>
+        </div>
+        <div className="relative">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <Search className="h-5 w-5 text-gray-400" />
+          </div>
+          <input
+            type="text"
+            placeholder={`Search by name...`}
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="text-black pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
         </div>
       </div>
 

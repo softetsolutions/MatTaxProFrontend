@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { toast } from "react-toastify";
 import { fetchUserDetails, updateUserDetails } from "../../utils/user";
 import { User, Mail, Phone, MapPin, Edit2, X, Check } from "lucide-react";
+import PhoneInput from "react-phone-input-2";
 
 export default function AccountPage() {
   const [userData, setUserData] = useState({
@@ -9,7 +10,10 @@ export default function AccountPage() {
     lastName: "",
     email: "",
     phone: "",
-    address: "",
+    addressLine1: "",
+    city: "",
+    postcode: "",
+    country: "",
   });
 
   const [isEditing, setIsEditing] = useState(false);
@@ -36,6 +40,10 @@ export default function AccountPage() {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handlePhoneChange = (value) => {
+    setFormData((prev) => ({ ...prev, phone: value }));
   };
 
   const handleSubmit = async (e) => {
@@ -90,10 +98,28 @@ export default function AccountPage() {
     },
     { id: "phone", label: "Phone Number", type: "tel", icon: Phone },
     {
-      id: "address",
-      label: "Address",
+      id: "addressLine1",
+      label: "Address Line 1",
       type: "text",
       fullWidth: true,
+      icon: MapPin,
+    },
+    {
+      id: "city",
+      label: "City",
+      type: "text",
+      icon: MapPin,
+    },
+    {
+      id: "postcode",
+      label: "Postcode",
+      type: "text",
+      icon: MapPin,
+    },
+    {
+      id: "country",
+      label: "Country",
+      type: "text",
       icon: MapPin,
     },
   ];
@@ -133,9 +159,16 @@ export default function AccountPage() {
                 <Mail size={16} />
                 {userData.email}
               </p>
-              <p className="text-blue-100 flex items-center justify-center sm:justify-start gap-2 mt-1">
+              <p className="flex items-center justify-center sm:justify-start gap-2 mt-1">
                 <Phone size={16} />
                 {userData.phone || "No phone number"}
+              </p>
+              <p className="text-blue-100 flex items-center justify-center sm:justify-start gap-2 mt-1">
+                <MapPin size={16} />
+                {userData.addressLine1 || "No address"}
+                {userData.city && `, ${userData.city}`}
+                {userData.postcode && `, ${userData.postcode}`}
+                {userData.country && `, ${userData.country}`}
               </p>
               <div className="mt-4 flex flex-wrap gap-3 justify-center sm:justify-start"></div>
             </div>
@@ -187,21 +220,59 @@ export default function AccountPage() {
                           </div>
                         </label>
                         <div className="relative">
-                          <input
-                            type={field.type}
-                            id={field.id}
-                            name={field.id}
-                            value={formData[field.id] || ""}
-                            onChange={handleChange}
-                            className={`w-full p-3 pl-4 bg-white border ${
-                              field.disabled
-                                ? "bg-gray-50 text-gray-500 cursor-not-allowed"
-                                : "hover:border-blue-300"
-                            } border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 transition-all duration-200`}
-                            required={field.required}
-                            disabled={field.disabled}
-                            placeholder={`Enter your ${field.label.toLowerCase()}`}
-                          />
+                          {field.id === "phone" ? (
+                            <PhoneInput
+                              country={"gb"}
+                              value={formData.phone}
+                              onChange={handlePhoneChange}
+                              inputProps={{
+                                name: "phone",
+                                required: true,
+                                autoFocus: false,
+                              }}
+                              inputStyle={{
+                                width: "100%",
+                                height: "48px",
+                                borderRadius: "0.5rem",
+                                border: "1px solid #e5e7eb",
+                                paddingLeft: "48px",
+                                fontSize: "1rem",
+                                color: "#000000",
+                                backgroundColor: "#fff",
+
+                              }}
+                              dropdownStyle={{
+                                color: "#000000",
+                                backgroundColor: "#ffffff"
+                              }}
+                              buttonStyle={{
+                                border: "none",
+                                background: "none",
+                                left: "12px",
+                                top: "12px",
+                                paddingBottom: "10px",
+                              }}
+                              containerStyle={{
+                                width: "100%",
+                              }}
+                            />
+                          ) : (
+                            <input
+                              type={field.type}
+                              id={field.id}
+                              name={field.id}
+                              value={formData[field.id] || ""}
+                              onChange={handleChange}
+                              className={`w-full p-3 pl-4 bg-white border ${
+                                field.disabled
+                                  ? "bg-gray-50 text-gray-500 cursor-not-allowed"
+                                  : "hover:border-blue-300"
+                              } border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 transition-all duration-200`}
+                              required={field.required}
+                              disabled={field.disabled}
+                              placeholder={`Enter your ${field.label.toLowerCase()}`}
+                            />
+                          )}
                         </div>
                         {field.disabled && (
                           <p className="mt-1 text-xs text-gray-500 flex items-center gap-1">
@@ -285,16 +356,28 @@ export default function AccountPage() {
 
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-100">
-                    Address
+                    Address Information
                   </h3>
-                  <div className="bg-gray-50 rounded-lg p-4 transition-all hover:bg-gray-100">
-                    <div className="flex items-center gap-2 text-sm font-medium text-gray-500 mb-1">
-                      <MapPin size={16} className="text-blue-600" />
-                      Address
-                    </div>
-                    <p className="text-lg font-medium text-gray-900">
-                      {userData.address || "No address provided"}
-                    </p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {[
+                      { id: "addressLine1", label: "Address Line 1" },
+                      { id: "city", label: "City" },
+                      { id: "postcode", label: "Postcode" },
+                      { id: "country", label: "Country" },
+                    ].map((field) => (
+                      <div
+                        key={field.id}
+                        className="bg-gray-50 rounded-lg p-4 transition-all hover:bg-gray-100"
+                      >
+                        <div className="flex items-center gap-2 text-sm font-medium text-gray-500 mb-1">
+                          <MapPin size={16} className="text-blue-600" />
+                          {field.label}
+                        </div>
+                        <p className="text-gray-900">
+                          {userData[field.id] || <span className="italic text-gray-400">Not provided</span>}
+                        </p>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>

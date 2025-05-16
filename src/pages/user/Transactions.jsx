@@ -7,6 +7,7 @@ import {
   X,
   Logs,
   Check,
+  Eye,
 } from "lucide-react";
 import { jwtDecode } from "jwt-decode";
 import { toast } from "react-toastify";
@@ -33,7 +34,7 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
     category: "",
     type: "moneyIn",
     vendor: "",
-    desc3:"",
+    desc3: "",
   });
   const [transactions, setTransactions] = useState([]);
   const [files, setFiles] = useState([]);
@@ -251,9 +252,15 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
           );
         }
 
-        setFormData({ amount: "", category: "", type: "moneyIn", vendor: "",desc3:"" });
+        setFormData({
+          amount: "",
+          category: "",
+          type: "moneyIn",
+          vendor: "",
+          desc3: "",
+        });
         setFiles([]);
-        setVendorSearch("")
+        setVendorSearch("");
       }
     } catch (err) {
       console.error("Operation failed:", err);
@@ -266,7 +273,13 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
   const handleCloseModal = () => {
     setShowModal(false);
     setEditingId(null);
-    setFormData({ amount: "", category: "", type: "moneyIn", vendor: "",desc3:"" });
+    setFormData({
+      amount: "",
+      category: "",
+      type: "moneyIn",
+      vendor: "",
+      desc3: "",
+    });
     setFiles([]);
     setRefreshTableList((prev) => !prev);
   };
@@ -406,6 +419,14 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
     } catch (err) {
       console.error("Error updating vendor:", err);
       toast.error(err.message || "Failed to update vendor");
+    }
+  };
+
+  const handleViewReceipt = (receiptUrl) => {
+    if (receiptUrl) {
+      window.open(receiptUrl, "_blank", "noopener,noreferrer");
+    } else {
+      toast.info("No receipt found for this transaction.");
     }
   };
 
@@ -655,6 +676,13 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
                               <Edit className="w-4 h-4" />
                             </button>
                             <button
+                              onClick={() => handleViewReceipt(txn.receipt_url)}
+                              className="p-1 text-teal-600 hover:text-teal-800 rounded hover:bg-teal-50"
+                              title="View Receipt"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </button>
+                            <button
                               onClick={() => handleDelete(txn.id)}
                               className="p-1 text-red-600 hover:text-red-800 rounded hover:bg-red-50"
                               title="Delete"
@@ -808,153 +836,155 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
                 </div>
 
                 <div className="mb-4" ref={vendorRef}>
-  <label className="block text-gray-700 text-sm font-bold mb-2">
-    Vendor
-  </label>
-  <div className="relative">
-    <div
-      className="flex items-center w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer bg-white"
-      onClick={() => setShowVendorDropdown(true)}
-    >
-      <input
-        type="text"
-        value={vendorOptions.find(v => v.id === formData.vendor)?.name || 
-          vendorSearch}
-        onChange={(e) => {
-          setVendorSearch(e.target.value);
-          setShowVendorDropdown(true);
-          setFormData(prev => ({
-            ...prev,
-            vendor: e.target.value
-          }));
-        }}
-        className="w-full bg-transparent focus:outline-none text-sm text-black"
-        placeholder="Search or type vendor name"
-        autoComplete="off"
-      />
-      <ChevronDown className="w-4 h-4 text-gray-400" />
-    </div>
-
-    {showVendorDropdown && (
-      <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded shadow-lg">
-        <div className="p-2 border-b">
-          <div className="flex items-center border rounded bg-gray-50">
-            <input
-              type="text"
-              value={vendorSearch}
-              onChange={(e) => {
-                setVendorSearch(e.target.value);
-                setFormData(prev => ({
-                  ...prev,
-                  vendor: e.target.value
-                }));
-              }}
-              className="w-full p-2 bg-transparent focus:outline-none text-sm text-black"
-              placeholder="Search vendors..."
-              autoFocus
-            />
-            {vendorSearch && (
-              <button
-                onClick={() => setVendorSearch("")}
-                className="p-2"
-              >
-                <X className="w-4 h-4 text-gray-400" />
-              </button>
-            )}
-          </div>
-        </div>
-        <div className="max-h-60 overflow-y-auto">
-          {filteredVendors.length > 0 ? (
-            filteredVendors.map((vendor) => (
-              <div
-                key={vendor.id}
-                className="px-4 py-2 hover:bg-blue-50 cursor-pointer text-black flex justify-between items-center"
-              >
-                {editingVendorId === vendor.id ? (
-                  <div className="flex items-center gap-2 w-full">
-                    <input
-                      type="text"
-                      value={editingVendorName}
-                      onChange={(e) =>
-                        setEditingVendorName(e.target.value)
-                      }
-                      className="flex-grow p-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          handleVendorNameUpdate(
-                            vendor.id,
-                            editingVendorName
-                          );
-                        } else if (e.key === "Escape") {
-                          setEditingVendorId(null);
-                          setEditingVendorName("");
+                  <label className="block text-gray-700 text-sm font-bold mb-2">
+                    Vendor
+                  </label>
+                  <div className="relative">
+                    <div
+                      className="flex items-center w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer bg-white"
+                      onClick={() => setShowVendorDropdown(true)}
+                    >
+                      <input
+                        type="text"
+                        value={
+                          vendorOptions.find((v) => v.id === formData.vendor)
+                            ?.name || vendorSearch
                         }
-                      }}
-                      autoFocus
-                    />
-                    <button
-                      onClick={() =>
-                        handleVendorNameUpdate(
-                          vendor.id,
-                          editingVendorName
-                        )
-                      }
-                      className="p-1 text-green-600 hover:text-green-800 rounded hover:bg-green-50"
-                      title="Save changes"
-                    >
-                      <Check className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => {
-                        setEditingVendorId(null);
-                        setEditingVendorName("");
-                      }}
-                      className="p-1 text-red-600 hover:text-red-800 rounded hover:bg-red-50"
-                      title="Cancel"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
+                        onChange={(e) => {
+                          setVendorSearch(e.target.value);
+                          setShowVendorDropdown(true);
+                          setFormData((prev) => ({
+                            ...prev,
+                            vendor: e.target.value,
+                          }));
+                        }}
+                        className="w-full bg-transparent focus:outline-none text-sm text-black"
+                        placeholder="Search or type vendor name"
+                        autoComplete="off"
+                      />
+                      <ChevronDown className="w-4 h-4 text-gray-400" />
+                    </div>
+
+                    {showVendorDropdown && (
+                      <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded shadow-lg">
+                        <div className="p-2 border-b">
+                          <div className="flex items-center border rounded bg-gray-50">
+                            <input
+                              type="text"
+                              value={vendorSearch}
+                              onChange={(e) => {
+                                setVendorSearch(e.target.value);
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  vendor: e.target.value,
+                                }));
+                              }}
+                              className="w-full p-2 bg-transparent focus:outline-none text-sm text-black"
+                              placeholder="Search vendors..."
+                              autoFocus
+                            />
+                            {vendorSearch && (
+                              <button
+                                onClick={() => setVendorSearch("")}
+                                className="p-2"
+                              >
+                                <X className="w-4 h-4 text-gray-400" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                        <div className="max-h-60 overflow-y-auto">
+                          {filteredVendors.length > 0 ? (
+                            filteredVendors.map((vendor) => (
+                              <div
+                                key={vendor.id}
+                                className="px-4 py-2 hover:bg-blue-50 cursor-pointer text-black flex justify-between items-center"
+                              >
+                                {editingVendorId === vendor.id ? (
+                                  <div className="flex items-center gap-2 w-full">
+                                    <input
+                                      type="text"
+                                      value={editingVendorName}
+                                      onChange={(e) =>
+                                        setEditingVendorName(e.target.value)
+                                      }
+                                      className="flex-grow p-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
+                                      onKeyDown={(e) => {
+                                        if (e.key === "Enter") {
+                                          handleVendorNameUpdate(
+                                            vendor.id,
+                                            editingVendorName
+                                          );
+                                        } else if (e.key === "Escape") {
+                                          setEditingVendorId(null);
+                                          setEditingVendorName("");
+                                        }
+                                      }}
+                                      autoFocus
+                                    />
+                                    <button
+                                      onClick={() =>
+                                        handleVendorNameUpdate(
+                                          vendor.id,
+                                          editingVendorName
+                                        )
+                                      }
+                                      className="p-1 text-green-600 hover:text-green-800 rounded hover:bg-green-50"
+                                      title="Save changes"
+                                    >
+                                      <Check className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                      onClick={() => {
+                                        setEditingVendorId(null);
+                                        setEditingVendorName("");
+                                      }}
+                                      className="p-1 text-red-600 hover:text-red-800 rounded hover:bg-red-50"
+                                      title="Cancel"
+                                    >
+                                      <X className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <>
+                                    <span
+                                      onClick={() => {
+                                        setFormData((prev) => ({
+                                          ...prev,
+                                          vendor: vendor.id, // Store vendor ID instead of name
+                                        }));
+                                        setShowVendorDropdown(false);
+                                        setVendorSearch(vendor.name); // Show the vendor name in the input
+                                      }}
+                                      className="flex-grow"
+                                    >
+                                      {vendor.name}
+                                    </span>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setEditingVendorId(vendor.id);
+                                        setEditingVendorName(vendor.name);
+                                      }}
+                                      className="p-1 text-blue-600 hover:text-blue-800 rounded hover:bg-blue-50"
+                                      title="Edit vendor name"
+                                    >
+                                      <Edit className="w-4 h-4" />
+                                    </button>
+                                  </>
+                                )}
+                              </div>
+                            ))
+                          ) : (
+                            <div className="p-2 text-gray-500 text-center">
+                              No vendors found
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
-                ) : (
-                  <>
-                    <span
-                      onClick={() => {
-                        setFormData(prev => ({
-                          ...prev,
-                          vendor: vendor.id // Store vendor ID instead of name
-                        }));
-                        setShowVendorDropdown(false);
-                        setVendorSearch(vendor.name); // Show the vendor name in the input
-                      }}
-                      className="flex-grow"
-                    >
-                      {vendor.name}
-                    </span>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setEditingVendorId(vendor.id);
-                        setEditingVendorName(vendor.name);
-                      }}
-                      className="p-1 text-blue-600 hover:text-blue-800 rounded hover:bg-blue-50"
-                      title="Edit vendor name"
-                    >
-                      <Edit className="w-4 h-4" />
-                    </button>
-                  </>
-                )}
-              </div>
-            ))
-          ) : (
-            <div className="p-2 text-gray-500 text-center">
-              No vendors found
-            </div>
-          )}
-        </div>
-      </div>
-    )}
-  </div>
-</div>
+                </div>
                 <div className="mb-6">
                   <label className="block text-gray-700 text-sm font-bold mb-2">
                     Transaction Type
