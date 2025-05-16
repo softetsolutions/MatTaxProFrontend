@@ -2,14 +2,18 @@ import Navbar from '../components/Navbar';
 import Hero from '../components/Hero';
 import Features from '../components/Features';
 import Working from '../components/Working';
+import Footer from '../components/Footer';
 
 function LandingPage() {
   return (
-    <div>
+    <div className="min-h-screen bg-black text-white flex flex-col">
       <Navbar/>
-      <Hero/>
-      <Features/>
-      <Working/>
+      <main className="flex-grow">
+        <Hero/>
+        <Features/>
+        <Working/>
+      </main>
+      <Footer/>
     </div>
   )
 }

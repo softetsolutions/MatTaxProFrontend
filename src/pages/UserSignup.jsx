@@ -271,6 +271,19 @@ export default function UserSignupPage() {
                   )}
                 </div>
 
+                {/* Terms and Privacy Notice */}
+                <div className="text-sm text-gray-400 text-center mb-4">
+                  By registering for this service, you agree to our{" "}
+                  <Link to="/terms-conditions" className="text-yellow-500 hover:text-yellow-400">
+                    Terms & Conditions
+                  </Link>{" "}
+                  and{" "}
+                  <Link to="/privacy-policy" className="text-yellow-500 hover:text-yellow-400">
+                    Privacy Policy
+                  </Link>
+                  .
+                </div>
+
                 {/* Submit Button */}
                 <button
                   type="submit"

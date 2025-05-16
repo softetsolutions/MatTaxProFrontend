@@ -16,6 +16,9 @@ import AllUsers from "./pages/admin/AllUsers";
 import AllAccountants from "./pages/admin/AllAccountants";
 import RenderAllUserOrTransactions from "./pages/user/RenderAllUsersOrTransactions";
 import VerifyByGoogle from "./pages/VerifyByGoogle";
+import ForgotPassword from "./pages/ForgotPassword";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import TermsAndConditions from "./pages/TermsAndConditions";
 
 
 function App() {
@@ -29,6 +32,9 @@ function App() {
         <Route path="/register/:role" element={<UserSignup />} />
         <Route path="/verifyEmail/:token" element={<VerifyEmail />} />
         <Route path="/verifyByGoogle/" element={<VerifyByGoogle />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+        <Route path="/terms-conditions" element={<TermsAndConditions />} />
         {/* user */}
         <Route
           path="/dashboard"

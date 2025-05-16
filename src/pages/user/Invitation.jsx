@@ -1,14 +1,17 @@
 import { useState, useEffect } from "react";
 import { ArrowUpDown, Check, X, Info } from "lucide-react";
 import { toast } from "react-toastify";
+import { useOutletContext } from "react-router-dom";
 import {
   fetchInvitations,
   handleApproveInvitation,
   handleRejectInvitation,
+  fetchAndUpdatePendingInvitationsCount,
 } from "../../utils/invitationHelper";
 import ConfirmationModal from "../../components/ConfirmationModal";
 
 export default function InvitationPage() {
+  const { setPendingInvitationsCount } = useOutletContext();
   const [invitations, setInvitations] = useState([]);
   const [sortField, setSortField] = useState("id");
   const [sortDirection, setSortDirection] = useState("asc");
@@ -75,6 +78,7 @@ export default function InvitationPage() {
               : invitation
           )
         );
+        setPendingInvitationsCount((prev) => Math.max(0, prev - 1));
         toast.success("Invitation approved successfully");
       } else {
         await handleRejectInvitation(confirmationInvitationId, invitations);
@@ -85,8 +89,11 @@ export default function InvitationPage() {
               : invitation
           )
         );
+        setPendingInvitationsCount((prev) => Math.max(0, prev - 1));
         toast.success("Invitation rejected successfully");
       }
+
+      fetchAndUpdatePendingInvitationsCount(setPendingInvitationsCount);
 
       if (
         selectedInvitation &&

@@ -142,7 +142,7 @@ export default function DashboardLayout() {
       {/* Main Content Area */}
       <main className="flex-1 h-screen overflow-hidden">
         <div className="h-full overflow-auto p-6 md:p-8">
-          <Outlet />
+          <Outlet context={{ setPendingInvitationsCount }} />
         </div>
       </main>
     </div>
