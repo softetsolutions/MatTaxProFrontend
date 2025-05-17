@@ -1,4 +1,5 @@
 import PropTypes from "prop-types";
+import { useEffect } from "react";
 
 const ConfirmationModal = ({
   isOpen,
@@ -8,11 +9,23 @@ const ConfirmationModal = ({
   title,
   message,
 }) => {
+  // Prevent background scroll when modal is open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="w-full max-w-md bg-white p-6 rounded-lg shadow-xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 min-h-screen w-screen overflow-y-auto">
+      <div className="w-full max-w-md bg-white p-6 rounded-lg shadow-xl max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-xl font-semibold text-gray-900">
             {title || `Confirm ${action}`}
