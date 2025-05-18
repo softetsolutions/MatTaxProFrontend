@@ -23,6 +23,10 @@ import {
 import { fetchAllVendors, updateVendor } from "../../utils/vendorApi";
 import { downloadCSV } from "../../utils/convertAndDownloadCsv";
 import UploadCsv from "./UploadCsv";
+import { fetchReceipt } from "../../utils/receiptApi";
+import DateRangeFilter from "../../components/DateRangeFilter";
+import { filterTransactionsByDate } from "../../utils/dateFilter";
+import TransactionTypeFilter from "../../components/TransactionTypeFilter";
 
 export default function TransactionsPage({ setIsTransasctionLog }) {
   const [sortField, setSortField] = useState("date");
@@ -35,6 +39,7 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
     type: "moneyIn",
     vendor: "",
     desc3: "",
+    accountNo: "",
   });
   const [transactions, setTransactions] = useState([]);
   const [files, setFiles] = useState([]);
@@ -58,6 +63,12 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
   const [editingVendorId, setEditingVendorId] = useState(null);
   const [editingVendorName, setEditingVendorName] = useState("");
   const [isUploadModalCsvOpen, setIsUploadModalCsvOpen] = useState(false);
+  const [showReceiptModal, setShowReceiptModal] = useState(false);
+  const [currentReceipt, setCurrentReceipt] = useState(null);
+  const [isLoadingReceipt, setIsLoadingReceipt] = useState(false);
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [transactionTypeFilter, setTransactionTypeFilter] = useState("all");
 
   // dropdown options
   const categoryOptions = [
@@ -258,6 +269,7 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
           type: "moneyIn",
           vendor: "",
           desc3: "",
+          accountNo: "",
         });
         setFiles([]);
         setVendorSearch("");
@@ -279,6 +291,7 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
       type: "moneyIn",
       vendor: "",
       desc3: "",
+      accountNo: "",
     });
     setFiles([]);
     setRefreshTableList((prev) => !prev);
@@ -310,6 +323,7 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
         category: transactionToEdit.category,
         type: transactionToEdit.type,
         vendorId: transactionToEdit.vendorid,
+        accountNo: transactionToEdit.accountNo || "",
       });
       setEditingId(id);
       setShowModal(true);
@@ -363,17 +377,24 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
     return String(a[sortField]).localeCompare(String(b[sortField])) * modifier;
   });
 
-  const filteredTransactions = sortedTransactions.filter((transaction) => {
-    if (!searchQuery) return true;
-    const query = searchQuery.toLowerCase();
-    return (
-      transaction.category?.toLowerCase().includes(query) ||
-      transaction.type?.toLowerCase().includes(query) ||
-      transaction.vendorid?.toLowerCase().includes(query) ||
-      transaction.amount?.toLowerCase().includes(query) ||
-      transaction.created_at?.toLowerCase().includes(query)
-    );
-  });
+  const filteredTransactions = filterTransactionsByDate(
+    sortedTransactions.filter((transaction) => {
+      if (!searchQuery) return true;
+      const query = searchQuery.toLowerCase();
+      return (
+        transaction.category?.toLowerCase().includes(query) ||
+        transaction.type?.toLowerCase().includes(query) ||
+        transaction.vendorid?.toLowerCase().includes(query) ||
+        transaction.amount?.toLowerCase().includes(query) ||
+        transaction.created_at?.toLowerCase().includes(query)
+      );
+    })
+    .filter((txn) =>
+      transactionTypeFilter === "all" ? true : txn.type === transactionTypeFilter
+    ),
+    startDate,
+    endDate
+  );
 
   // Filter users based on search
   const filteredUsers = users.filter((user) =>
@@ -422,12 +443,29 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
     }
   };
 
-  const handleViewReceipt = (receiptUrl) => {
-    if (receiptUrl) {
-      window.open(receiptUrl, "_blank", "noopener,noreferrer");
-    } else {
+  const handleViewReceipt = async (receiptId) => {
+    if (!receiptId) {
       toast.info("No receipt found for this transaction.");
+      return;
     }
+
+    try {
+      setIsLoadingReceipt(true);
+      const base64Image = await fetchReceipt(receiptId, navigate);
+      setCurrentReceipt(`data:image/jpeg;base64,${base64Image}`);
+      setShowReceiptModal(true);
+    } catch (error) {
+      toast.error("Failed to load receipt. Please try again.");
+      console.error("Error loading receipt:", error);
+    } finally {
+      setIsLoadingReceipt(false);
+    }
+  };
+
+  // Add this function to clear date filters
+  const clearDateFilters = () => {
+    setStartDate("");
+    setEndDate("");
   };
 
   if (loading) {
@@ -559,10 +597,30 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
                     : `bg-blue-600 hover:bg-blue-700`
                 } text-white text-sm font-medium rounded-md transition-colors hover:cursor-pointer`}
               >
-                Export Trasnsaction
+                Export Transaction
               </button>
             </>
           ) : null}
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <DateRangeFilter
+            startDate={startDate}
+            setStartDate={setStartDate}
+            endDate={endDate}
+            setEndDate={setEndDate}
+            onClear={clearDateFilters}
+          />
+          {/* Transaction Type Filter Dropdown */}
+          <TransactionTypeFilter
+            value={transactionTypeFilter}
+            onChange={setTransactionTypeFilter}
+          />
+        </div>
+        <div className="text-sm text-gray-500">
+          {filteredTransactions.length} transactions found
         </div>
       </div>
 
@@ -743,6 +801,25 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
                     required
                     step="0.01"
                     min="0"
+                  />
+                </div>
+
+                <div className="mb-4">
+                  <label
+                    className="block text-gray-700 text-sm font-bold mb-2"
+                    htmlFor="accountNo"
+                  >
+                    Account Number
+                  </label>
+                  <input
+                    type="text"
+                    id="accountNo"
+                    name="accountNo"
+                    value={formData.accountNo}
+                    onChange={handleInputChange}
+                    className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
+                    placeholder="Enter account number"
+                    required
                   />
                 </div>
 
@@ -1114,6 +1191,39 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
         <UploadCsv
           closeUploadModalCsvOpen={() => setIsUploadModalCsvOpen(false)}
         />
+      )}
+
+      {/* Add Receipt Modal */}
+      {showReceiptModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="w-full max-w-4xl bg-white p-6 rounded-lg shadow-xl border border-gray-200">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-semibold text-gray-900">Receipt</h3>
+              <button
+                onClick={() => {
+                  setShowReceiptModal(false);
+                  setCurrentReceipt(null);
+                }}
+                className="text-gray-500 hover:text-red-500"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="relative">
+              {isLoadingReceipt ? (
+                <div className="flex justify-center items-center h-64">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+                </div>
+              ) : (
+                <img
+                  src={currentReceipt}
+                  alt="Receipt"
+                  className="max-w-full max-h-[70vh] object-contain"
+                />
+              )}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

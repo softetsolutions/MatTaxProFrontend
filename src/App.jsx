@@ -19,6 +19,7 @@ import VerifyByGoogle from "./pages/VerifyByGoogle";
 import ForgotPassword from "./pages/ForgotPassword";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsAndConditions from "./pages/TermsAndConditions";
+import ResetPassword from "./pages/ResetPassword";
 
 
 function App() {
@@ -33,6 +34,7 @@ function App() {
         <Route path="/verifyEmail/:token" element={<VerifyEmail />} />
         <Route path="/verifyByGoogle/" element={<VerifyByGoogle />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/resetPassword/:token" element={<ResetPassword />} />
         <Route path="/privacy-policy" element={<PrivacyPolicy />} />
         <Route path="/terms-conditions" element={<TermsAndConditions />} />
         {/* user */}
