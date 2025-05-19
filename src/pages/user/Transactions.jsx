@@ -470,14 +470,33 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
 
     try {
       setIsLoadingReceipt(true);
-      const base64Image = await fetchReceipt(receiptId, navigate);
-      setCurrentReceipt(`data:image/jpeg;base64,${base64Image}`);
       setShowReceiptModal(true);
+      const base64Image = await fetchReceipt(receiptId, navigate);
+      
+      // Validate the base64 image data
+      if (!base64Image || typeof base64Image !== 'string' || base64Image.trim() === '') {
+        toast.warning("Receipt image data is empty or invalid");
+        return;
+      }
+      
+      // Create an image object to pre-load the image
+      const img = new Image();
+      img.onload = () => {
+        setCurrentReceipt(`data:image/jpeg;base64,${base64Image}`);
+        setIsLoadingReceipt(false);
+      };
+      
+      img.onerror = () => {
+        console.error("Error loading image preview");
+        setIsLoadingReceipt(false);
+        toast.error("Failed to load receipt image. The format may be unsupported.");
+      };
+      
+      img.src = `data:image/jpeg;base64,${base64Image}`;
     } catch (error) {
+      setIsLoadingReceipt(false);
       toast.error("Failed to load receipt. Please try again.");
       console.error("Error loading receipt:", error);
-    } finally {
-      setIsLoadingReceipt(false);
     }
   };
 
@@ -753,7 +772,7 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
                               <Edit className="w-4 h-4" />
                             </button>
                             <button
-                              onClick={() => handleViewReceipt(txn.receipt_url)}
+                              onClick={() => handleViewReceipt(txn.id)}
                               className="p-1 text-teal-600 hover:text-teal-800 rounded hover:bg-teal-50"
                               title="View Receipt"
                             >
@@ -1332,8 +1351,8 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
       {/* Add Receipt Modal */}
       {showReceiptModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="w-full max-w-4xl bg-white p-6 rounded-lg shadow-xl border border-gray-200">
-            <div className="flex justify-between items-center mb-4">
+          <div className="bg-white rounded-lg shadow-xl border border-gray-200 max-w-4xl w-[80vw] max-h-[90vh] flex flex-col">
+            <div className="flex justify-between items-center p-4 border-b">
               <h3 className="text-xl font-semibold text-gray-900">Receipt</h3>
               <button
                 onClick={() => {
@@ -1345,18 +1364,34 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
                 ✕
               </button>
             </div>
-            <div className="relative">
+            <div className="p-6 overflow-auto flex-1 flex items-center justify-center min-h-[60vh]">
               {isLoadingReceipt ? (
-                <div className="flex justify-center items-center h-64">
+                <div className="flex justify-center items-center h-64 w-full">
                   <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
                 </div>
               ) : (
-                <img
-                  src={currentReceipt}
-                  alt="Receipt"
-                  className="max-w-full max-h-[70vh] object-contain"
-                />
+                <div className="flex items-center justify-center">
+                  <img
+                    src={currentReceipt}
+                    alt="Receipt"
+                    className="max-w-full h-auto min-h-[50vh] object-contain border border-gray-200 shadow-sm"
+                    onError={(e) => {
+                      console.error("Image failed to load",e);
+                    }}
+                  />
+                </div>
               )}
+            </div>
+            <div className="p-4 border-t flex justify-end">
+              <button
+                onClick={() => {
+                  setShowReceiptModal(false);
+                  setCurrentReceipt(null);
+                }}
+                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+              >
+                Close
+              </button>
             </div>
           </div>
         </div>
