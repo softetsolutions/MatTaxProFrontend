@@ -3,6 +3,7 @@ import { toast } from "react-toastify";
 import { fetchUserDetails, updateUserDetails } from "../../utils/user";
 import { User, Mail, Phone, MapPin, Edit2, X, Check } from "lucide-react";
 import PhoneInput from "react-phone-input-2";
+import "react-phone-input-2/lib/style.css";
 
 export default function AccountPage() {
   const [userData, setUserData] = useState({
