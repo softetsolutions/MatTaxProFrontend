@@ -69,18 +69,34 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [transactionTypeFilter, setTransactionTypeFilter] = useState("all");
+  const [accountNumberSearch, setAccountNumberSearch] = useState("");
+  const [showAccountNumberDropdown, setShowAccountNumberDropdown] = useState(false);
+  const accountNumberRef = useRef(null);
+  const accountNumberOptions = [
+    { id: 1, number: "22333" },
+    { id: 2, number: "98765" },
+    { id: 3, number: "1122334" },
+  ];
+  const filteredAccountNumbers = accountNumberOptions.filter((acc) =>
+    acc.number.toLowerCase().includes(accountNumberSearch.toLowerCase())
+  );
 
   // dropdown options
   const categoryOptions = [
-    "Shopping",
-    "Entertainment",
-    "Groceries",
-    "Utilities",
-    "Transport",
-    "Other",
+    { id: 1, name: "Shopping" },
+    { id: 2, name: "Entertainment" },
+    { id: 3, name: "Groceries" },
+    { id: 4, name: "Utilities" },
+    { id: 5, name: "Transport" },
+    { id: 6, name: "Other" },
   ];
   const categoryRef = useRef(null);
   const vendorRef = useRef(null);
+  // GST
+  const [showGstVat, setShowGstVat] = useState(false);
+  const [gstVatAmount, setGstVatAmount] = useState("");
+  const [gstVatPercentage, setGstVatPercentage] = useState("");
+  const [gstVatInputMode, setGstVatInputMode] = useState("amount"); 
 
   // Initialize userRole once when component mounts
   useEffect(() => {
@@ -144,6 +160,9 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
       }
       if (vendorRef.current && !vendorRef.current.contains(event.target)) {
         setShowVendorDropdown(false);
+      }
+      if (accountNumberRef.current && !accountNumberRef.current.contains(event.target)) {
+        setShowAccountNumberDropdown(false);
       }
     }
 
@@ -345,7 +364,7 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
 
   // Filter functions dropdowns
   const filteredCategories = categoryOptions.filter((category) =>
-    category.toLowerCase().includes(categorySearch.toLowerCase())
+    category.name.toLowerCase().includes(categorySearch.toLowerCase())
   );
 
   const filteredVendors = vendorOptions.filter((vendor) =>
@@ -355,13 +374,13 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
   const handleSelect = (type, value) => {
     setFormData((prev) => ({
       ...prev,
-      [type]: type === "vendor" ? value.id : value,
+      [type]: type === "vendor" || type === "category" ? value.id : value,
     }));
     if (type === "category") {
-      setCategorySearch("");
+      setCategorySearch(value.name);
       setShowCategoryDropdown(false);
-    } else {
-      setVendorSearch("");
+    } else if (type === "vendor") {
+      setVendorSearch(value.name);
       setShowVendorDropdown(false);
     }
   };
@@ -804,23 +823,74 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
                   />
                 </div>
 
-                <div className="mb-4">
-                  <label
-                    className="block text-gray-700 text-sm font-bold mb-2"
-                    htmlFor="accountNo"
-                  >
+                <div className="mb-4" ref={accountNumberRef}>
+                  <label className="block text-gray-700 text-sm font-bold mb-2">
                     Account Number
                   </label>
-                  <input
-                    type="text"
-                    id="accountNo"
-                    name="accountNo"
-                    value={formData.accountNo}
-                    onChange={handleInputChange}
-                    className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
-                    placeholder="Enter account number"
-                    required
-                  />
+                  <div className="relative">
+                    <div
+                      className="flex items-center w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer bg-white"
+                      onClick={() => setShowAccountNumberDropdown(true)}
+                    >
+                      <input
+                        type="text"
+                        value={
+                          accountNumberOptions.find(acc => acc.number === formData.accountNo)?.number ||
+                          accountNumberSearch
+                        }
+                        onChange={e => {
+                          setAccountNumberSearch(e.target.value);
+                          setShowAccountNumberDropdown(true);
+                        }}
+                        className="w-full bg-transparent focus:outline-none text-sm text-black"
+                        placeholder="Search or type account number"
+                        autoComplete="off"
+                      />
+                      <ChevronDown className="w-4 h-4 text-gray-400" />
+                    </div>
+                    {showAccountNumberDropdown && (
+                      <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded shadow-lg">
+                        <div className="p-2 border-b">
+                          <div className="flex items-center border rounded bg-gray-50">
+                            <input
+                              type="text"
+                              value={accountNumberSearch}
+                              onChange={e => setAccountNumberSearch(e.target.value)}
+                              className="w-full p-2 bg-transparent focus:outline-none text-sm text-black"
+                              placeholder="Search account numbers..."
+                              autoFocus
+                            />
+                            {accountNumberSearch && (
+                              <button onClick={() => setAccountNumberSearch("")} className="p-2">
+                                <X className="w-4 h-4 text-gray-400" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                        <div className="max-h-60 overflow-y-auto">
+                          {filteredAccountNumbers.length > 0 ? (
+                            filteredAccountNumbers.map((acc) => (
+                              <div
+                                key={acc.id}
+                                className="px-4 py-2 hover:bg-blue-50 cursor-pointer text-black"
+                                onClick={() => {
+                                  setFormData(prev => ({ ...prev, accountNo: acc.number }));
+                                  setAccountNumberSearch(acc.number);
+                                  setShowAccountNumberDropdown(false);
+                                }}
+                              >
+                                {acc.number}
+                              </div>
+                            ))
+                          ) : (
+                            <div className="p-2 text-gray-500 text-center">
+                              No account numbers found
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <div className="mb-4">
@@ -844,45 +914,109 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
                   />
                 </div>
 
+                <div className="mb-4">
+                  <label className="text-gray-700 text-sm font-bold mb-2 flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={showGstVat}
+                      onChange={e => {
+                        setShowGstVat(e.target.checked);
+                        if (!e.target.checked) {
+                          setGstVatAmount("");
+                          setGstVatPercentage("");
+                        }
+                      }}
+                      className="form-checkbox h-4 w-4 text-blue-600"
+                    />
+                    GST/VAT
+                  </label>
+                  {showGstVat && (
+                    <div className="flex gap-4">
+                      <div className="flex-1">
+                        <label className="block text-xs text-gray-500 mb-1">GST/VAT Amount</label>
+                        <input
+                          type="number"
+                          value={gstVatAmount}
+                          disabled={gstVatInputMode === "percentage"}
+                          onFocus={() => setGstVatInputMode("amount")}
+                          onChange={e => {
+                            setGstVatAmount(e.target.value);
+                            const amt = parseFloat(e.target.value);
+                            const txnAmt = parseFloat(formData.amount);
+                            if (txnAmt && amt >= 0) {
+                              setGstVatPercentage(((amt / txnAmt) * 100).toFixed(2));
+                            } else {
+                              setGstVatPercentage("");
+                            }
+                          }}
+                          className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
+                          placeholder="GST/VAT Amount"
+                          min="0"
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <label className="block text-xs text-gray-500 mb-1">GST/VAT %</label>
+                        <input
+                          type="number"
+                          value={gstVatPercentage}
+                          disabled={gstVatInputMode === "amount"}
+                          onFocus={() => setGstVatInputMode("percentage")}
+                          onChange={e => {
+                            setGstVatPercentage(e.target.value);
+                            const perc = parseFloat(e.target.value);
+                            const txnAmt = parseFloat(formData.amount);
+                            if (txnAmt && perc >= 0) {
+                              setGstVatAmount(((perc / 100) * txnAmt).toFixed(2));
+                            } else {
+                              setGstVatAmount("");
+                            }
+                          }}
+                          className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
+                          placeholder="GST/VAT %"
+                          min="0"
+                          max="100"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 <div className="mb-4" ref={categoryRef}>
-                  <label
-                    className="block text-gray-700 text-sm font-bold mb-2"
-                    htmlFor="category"
-                  >
+                  <label className="block text-gray-700 text-sm font-bold mb-2">
                     Category
                   </label>
                   <div className="relative">
                     <div
                       className="flex items-center w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer bg-white"
-                      onClick={() =>
-                        setShowCategoryDropdown(!showCategoryDropdown)
-                      }
+                      onClick={() => setShowCategoryDropdown(true)}
                     >
-                      <span className="flex-grow text-gray-700">
-                        {formData.category || "Select a category"}
-                      </span>
+                      <input
+                        type="text"
+                        value={categoryOptions.find(c => c.id === formData.category)?.name || categorySearch}
+                        onChange={(e) => {
+                          setCategorySearch(e.target.value);
+                          setShowCategoryDropdown(true);
+                        }}
+                        className="w-full bg-transparent focus:outline-none text-sm text-black"
+                        placeholder="Search or type category name"
+                      />
                       <ChevronDown className="w-4 h-4 text-gray-400" />
                     </div>
 
                     {showCategoryDropdown && (
-                      <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded shadow-lg">
+                      <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded shadow-lg">
                         <div className="p-2 border-b">
-                          <div className="flex items-center border rounded bg-gray-50 text-black">
+                          <div className="flex items-center border rounded bg-gray-50">
                             <input
                               type="text"
                               value={categorySearch}
-                              onChange={(e) =>
-                                setCategorySearch(e.target.value)
-                              }
-                              className="w-full p-2 bg-transparent focus:outline-none text-sm"
+                              onChange={(e) => setCategorySearch(e.target.value)}
+                              className="w-full p-2 bg-transparent focus:outline-none text-sm text-black"
                               placeholder="Search categories..."
                               autoFocus
                             />
                             {categorySearch && (
-                              <button
-                                onClick={() => setCategorySearch("")}
-                                className="mr-2"
-                              >
+                              <button onClick={() => setCategorySearch("")} className="p-2">
                                 <X className="w-4 h-4 text-gray-400" />
                               </button>
                             )}
@@ -892,18 +1026,20 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
                           {filteredCategories.length > 0 ? (
                             filteredCategories.map((category) => (
                               <div
-                                key={category}
-                                onClick={() =>
-                                  handleSelect("category", category)
-                                }
-                                className="px-4 py-2 hover:bg-blue-50 cursor-pointer text-black"
+                                key={category.id}
+                                className="px-4 py-2 hover:bg-blue-50 cursor-pointer text-black flex justify-between items-center"
                               >
-                                {category}
+                                <span
+                                  onClick={() => handleSelect("category", category)}
+                                  className="flex-grow"
+                                >
+                                  {category.name}
+                                </span>
                               </div>
                             ))
                           ) : (
                             <div className="p-2 text-gray-500 text-center">
-                              No results found
+                              No categories found
                             </div>
                           )}
                         </div>
