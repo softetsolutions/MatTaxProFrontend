@@ -21,12 +21,15 @@ import {
   deleteTransaction,
 } from "../../utils/transactionsApi";
 import { fetchAllVendors, updateVendor } from "../../utils/vendorApi";
+import { fetchAllCategories, updateCategory, createCategory } from "../../utils/categoryApi";
+import { fetchAllAccounts, updateAccount, createAccount } from "../../utils/accountApi";
 import { downloadCSV } from "../../utils/convertAndDownloadCsv";
 import UploadCsv from "./UploadCsv";
 import { fetchReceipt } from "../../utils/receiptApi";
 import DateRangeFilter from "../../components/DateRangeFilter";
 import { filterTransactionsByDate } from "../../utils/dateFilter";
 import TransactionTypeFilter from "../../components/TransactionTypeFilter";
+import { getDefaultGstPercentage, saveGstPercentage, calculateGstAmount } from "../../utils/gstVatUtils";
 
 export default function TransactionsPage({ setIsTransasctionLog }) {
   const [sortField, setSortField] = useState("date");
@@ -50,13 +53,13 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
   const [vendorSearch, setVendorSearch] = useState("");
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
   const [showVendorDropdown, setShowVendorDropdown] = useState(false);
-  const [searchQuery] = useState("");
   const [userRole, setUserRole] = useState(null);
   const [selectedUserId, setSelectedUserId] = useState(null);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [userSearch, setUserSearch] = useState("");
   const [users, setUsers] = useState([]);
   const [vendorOptions, setVendorOptions] = useState([]);
+  const [categoryOptions, setCategoryOptions] = useState([]);
   const userRef = useRef(null);
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -72,31 +75,19 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
   const [accountNumberSearch, setAccountNumberSearch] = useState("");
   const [showAccountNumberDropdown, setShowAccountNumberDropdown] = useState(false);
   const accountNumberRef = useRef(null);
-  const accountNumberOptions = [
-    { id: 1, number: "22333" },
-    { id: 2, number: "98765" },
-    { id: 3, number: "1122334" },
-  ];
-  const filteredAccountNumbers = accountNumberOptions.filter((acc) =>
+  const [accountOptions, setAccountOptions] = useState([]);
+  const [editingAccountId, setEditingAccountId] = useState(null);
+  const [editingAccountNumber, setEditingAccountNumber] = useState("");
+  const filteredAccountNumbers = accountOptions.filter((acc) =>
     acc.number.toLowerCase().includes(accountNumberSearch.toLowerCase())
   );
-
-  // dropdown options
-  const categoryOptions = [
-    { id: 1, name: "Shopping" },
-    { id: 2, name: "Entertainment" },
-    { id: 3, name: "Groceries" },
-    { id: 4, name: "Utilities" },
-    { id: 5, name: "Transport" },
-    { id: 6, name: "Other" },
-  ];
+  const [editingCategoryId, setEditingCategoryId] = useState(null);
+  const [editingCategoryName, setEditingCategoryName] = useState("");
   const categoryRef = useRef(null);
   const vendorRef = useRef(null);
-  // GST
   const [showGstVat, setShowGstVat] = useState(false);
   const [gstVatAmount, setGstVatAmount] = useState("");
   const [gstVatPercentage, setGstVatPercentage] = useState("");
-  const [gstVatInputMode, setGstVatInputMode] = useState("amount"); 
 
   // Initialize userRole once when component mounts
   useEffect(() => {
@@ -115,10 +106,12 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
         const decoded = jwtDecode(token);
         const userId = decoded.id;
 
-        // For accountants -> fetch vendors if user  selected
+        // For accountants -> fetch vendors if user selected
         if (userRole === "accountant" && !selectedUserId) {
           setTransactions([]);
           setVendorOptions([]);
+          setCategoryOptions([]);
+          setAccountOptions([]);
           setLoading(false);
           return;
         }
@@ -126,6 +119,8 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
         const data = await Promise.allSettled([
           fetchTransactions(selectedUserId, navigate),
           fetchAllVendors(userRole === "accountant" ? selectedUserId : userId),
+          fetchAllCategories(userRole === "accountant" ? selectedUserId : userId),
+          fetchAllAccounts(userRole === "accountant" ? selectedUserId : userId),
         ]);
 
         const vendors = data[1].value.reduce((acc, vendor) => {
@@ -136,7 +131,28 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
           acc.push(vendorData);
           return acc;
         }, []);
+
+        const categories = data[2].value.reduce((acc, category) => {
+          let categoryData = {
+            id: category.id,
+            name: category.name,
+          };
+          acc.push(categoryData);
+          return acc;
+        }, []);
+
+        const accounts = data[3].value.reduce((acc, account) => {
+          let accountData = {
+            id: account.id,
+            number: account.name, // Using name field as the display number
+          };
+          acc.push(accountData);
+          return acc;
+        }, []);
+
         setVendorOptions(vendors);
+        setCategoryOptions(categories);
+        setAccountOptions(accounts);
         setTransactions(data[0].value);
       } catch (err) {
         setError(err.message || "Failed to fetch transactions");
@@ -150,7 +166,7 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
     };
 
     fetchTransactionData();
-  }, [refreshTableList, selectedUserId, navigate]); // Removed userRole from dependencies
+  }, [refreshTableList, selectedUserId, navigate]);
 
   // Handle clicks outside of dropdowns
   useEffect(() => {
@@ -189,34 +205,30 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
     });
   };
 
-  const handleFileChange = (e) => {
-    if (e.target.files.length > 0) {
-      setFiles(Array.from(e.target.files));
-    }
-  };
-
-  const handleFileDrop = (e) => {
-    e.preventDefault();
-    if (e.dataTransfer.files.length > 0) {
-      setFiles(Array.from(e.dataTransfer.files));
-    }
-  };
-
-  const handleDragOver = (e) => {
-    e.preventDefault();
-  };
-
   const handleSubmit = async (e) => {
     if (e) e.preventDefault();
-    const isEveryDataPresent = Object.values(formData).reduce((acc, value) => {
-      if (acc) {
-        acc = Boolean(value);
-      }
-      return acc;
-    }, true);
+    
+    // Check required fields
+    const requiredFields = {
+      amount: "Amount",
+      category: "Category",
+      type: "Transaction Type",
+      vendor: "Vendor",
+      desc3: "Transaction Details"
+    };
 
-    if (!isEveryDataPresent) {
-      toast.warning("Pls fill all the field");
+    const missingFields = Object.entries(requiredFields)
+      .filter(([key]) => {
+        if (key === 'category') {
+          // Check if either a category ID is selected or a custom category name is entered
+          return !formData[key] && !categorySearch;
+        }
+        return !formData[key];
+      })
+      .map(([, label]) => label);
+
+    if (missingFields.length > 0) {
+      toast.warning(`Please fill in the following required fields: ${missingFields.join(", ")}`);
       return;
     }
 
@@ -247,21 +259,69 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
         const decoded = jwtDecode(token);
         const userId = decoded.id;
 
+        let categoryId = formData.category;
+        let accountId = formData.accountNo;
+        
+        // If there's a custom category but no category ID, create a new category
+        if (!categoryId && categorySearch) {
+          try {
+            const newCategory = await createCategory(
+              categorySearch,
+              userRole === "accountant" ? selectedUserId : userId
+            );
+            categoryId = newCategory.id;
+            
+            // Update the categories list
+            setCategoryOptions(prev => [...prev, { id: newCategory.id, name: categorySearch }]);
+          } catch (err) {
+            console.error("Error creating new category:", err);
+            toast.error("Failed to create new category");
+            return;
+          }
+        }
+
+        // If  no account ID, create a new account
+        if (!accountId && accountNumberSearch) {
+          try {
+            const newAccount = await createAccount(
+              accountNumberSearch,
+              userRole === "accountant" ? selectedUserId : userId
+            );
+            accountId = newAccount.id;
+            
+            // Update the accounts list
+            setAccountOptions(prev => [...prev, { id: newAccount.id, number: newAccount.name }]);
+          } catch (err) {
+            console.error("Error creating new account:", err);
+            toast.error("Failed to create new account");
+            return;
+          }
+        }
+
         const transactionData = {
           amount: parseFloat(formData.amount),
-          category: formData.category,
+          category: categoryId,
           type: formData.type,
           vendorId: formData.vendor,
           desc3: formData.desc3,
-          isdeleted: false,
-          userid: userRole === "accountant" ? selectedUserId : userId,
+          isDeleted: false,
+          userId: userRole === "accountant" ? selectedUserId : userId,
+          "accountNo": accountId || formData.accountNo || null
         };
 
         if (files.length > 0) {
           const formDataObj = new FormData();
-          Object.entries(transactionData).forEach(([key, value]) => {
-            formDataObj.append(key, value);
-          });
+          // Append each field individually to ensure correct naming
+          formDataObj.append("amount", transactionData.amount);
+          formDataObj.append("category", transactionData.category);
+          formDataObj.append("type", transactionData.type);
+          formDataObj.append("vendorId", transactionData.vendorId);
+          formDataObj.append("desc3", transactionData.desc3);
+          formDataObj.append("isDeleted", transactionData.isDeleted);
+          formDataObj.append("userId", transactionData.userId);
+          if (transactionData.accountNo) {
+            formDataObj.append("accountNo", transactionData.accountNo);
+          }
           files.forEach((file) => {
             formDataObj.append("file", file);
           });
@@ -370,21 +430,6 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
   const filteredVendors = vendorOptions.filter((vendor) =>
     vendor.name.toLowerCase().includes(vendorSearch.toLowerCase())
   );
-
-  const handleSelect = (type, value) => {
-    setFormData((prev) => ({
-      ...prev,
-      [type]: type === "vendor" || type === "category" ? value.id : value,
-    }));
-    if (type === "category") {
-      setCategorySearch(value.name);
-      setShowCategoryDropdown(false);
-    } else if (type === "vendor") {
-      setVendorSearch(value.name);
-      setShowVendorDropdown(false);
-    }
-  };
-
   const sortedTransactions = [...transactions].sort((a, b) => {
     const modifier = sortDirection === "asc" ? 1 : -1;
 
@@ -397,18 +442,7 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
   });
 
   const filteredTransactions = filterTransactionsByDate(
-    sortedTransactions.filter((transaction) => {
-      if (!searchQuery) return true;
-      const query = searchQuery.toLowerCase();
-      return (
-        transaction.category?.toLowerCase().includes(query) ||
-        transaction.type?.toLowerCase().includes(query) ||
-        transaction.vendorid?.toLowerCase().includes(query) ||
-        transaction.amount?.toLowerCase().includes(query) ||
-        transaction.created_at?.toLowerCase().includes(query)
-      );
-    })
-    .filter((txn) =>
+    sortedTransactions.filter((txn) =>
       transactionTypeFilter === "all" ? true : txn.type === transactionTypeFilter
     ),
     startDate,
@@ -464,20 +498,23 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
 
   const handleViewReceipt = async (receiptId) => {
     if (!receiptId) {
-      toast.info("No receipt found for this transaction.");
+      toast.info("No receipt available for this transaction");
       return;
     }
 
     try {
       setIsLoadingReceipt(true);
-      setShowReceiptModal(true);
       const base64Image = await fetchReceipt(receiptId, navigate);
       
       // Validate the base64 image data
       if (!base64Image || typeof base64Image !== 'string' || base64Image.trim() === '') {
-        toast.warning("Receipt image data is empty or invalid");
+        toast.warning("No receipt image found");
+        setIsLoadingReceipt(false);
         return;
       }
+      
+      // Only open modal if we have valid image data
+      setShowReceiptModal(true);
       
       // Create an image object to pre-load the image
       const img = new Image();
@@ -489,12 +526,14 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
       img.onerror = () => {
         console.error("Error loading image preview");
         setIsLoadingReceipt(false);
+        setShowReceiptModal(false);
         toast.error("Failed to load receipt image. The format may be unsupported.");
       };
       
       img.src = `data:image/jpeg;base64,${base64Image}`;
     } catch (error) {
       setIsLoadingReceipt(false);
+      setShowReceiptModal(false);
       toast.error("Failed to load receipt. Please try again.");
       console.error("Error loading receipt:", error);
     }
@@ -504,6 +543,52 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
   const clearDateFilters = () => {
     setStartDate("");
     setEndDate("");
+  };
+
+  const handleAccountNumberUpdate = async (accountId, newNumber) => {
+    try {
+      await updateAccount(accountId, newNumber);
+      setAccountOptions((prev) =>
+        prev.map((account) =>
+          account.id === accountId ? { ...account, number: newNumber } : account
+        )
+      );
+      setEditingAccountId(null);
+      setEditingAccountNumber("");
+      toast.success("Account number updated successfully");
+    } catch (err) {
+      console.error("Error updating account number:", err);
+      toast.error(err.message || "Failed to update account number");
+    }
+  };
+
+  const handleCategoryNameUpdate = async (categoryId, newName) => {
+    try {
+      await updateCategory(categoryId, newName);
+      setCategoryOptions((prev) =>
+        prev.map((category) =>
+          category.id === categoryId ? { ...category, name: newName } : category
+        )
+      );
+      setEditingCategoryId(null);
+      setEditingCategoryName("");
+      toast.success("Category updated successfully");
+    } catch (err) {
+      console.error("Error updating category:", err);
+      toast.error(err.message || "Failed to update category");
+    }
+  };
+
+  // Function to handle percentage change with cookie update
+  const handleGstPercentageChange = (newPercentage) => {
+    setGstVatPercentage(newPercentage);
+    if (newPercentage) {
+      saveGstPercentage(newPercentage);
+      const calculatedAmount = calculateGstAmount(formData.amount, newPercentage);
+      setGstVatAmount(calculatedAmount);
+    } else {
+      setGstVatAmount("");
+    }
   };
 
   if (loading) {
@@ -720,9 +805,7 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
                         colSpan="6"
                         className="px-4 py-6 text-center text-gray-500"
                       >
-                        {searchQuery
-                          ? "No matching transactions found"
-                          : "No transactions found"}
+                        No transactions found
                       </td>
                     </tr>
                   ) : (
@@ -817,10 +900,6 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
               className="flex flex-col md:flex-row gap-6"
             >
               <div className="flex-1">
-                {/* <h4 className="font-medium text-gray-700 mb-3">
-                  Transaction Details
-                </h4> */}
-
                 <div className="mb-4">
                   <label
                     className="block text-gray-700 text-sm font-bold mb-2"
@@ -854,7 +933,7 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
                       <input
                         type="text"
                         value={
-                          accountNumberOptions.find(acc => acc.number === formData.accountNo)?.number ||
+                          accountOptions.find(acc => acc.number === formData.accountNo)?.number ||
                           accountNumberSearch
                         }
                         onChange={e => {
@@ -898,7 +977,76 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
                                   setShowAccountNumberDropdown(false);
                                 }}
                               >
-                                {acc.number}
+                                {editingAccountId === acc.id ? (
+                                  <div className="flex items-center gap-2 w-full">
+                                    <input
+                                      type="text"
+                                      value={editingAccountNumber}
+                                      onChange={(e) =>
+                                        setEditingAccountNumber(e.target.value)
+                                      }
+                                      className="flex-grow p-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
+                                      onKeyDown={(e) => {
+                                        if (e.key === "Enter") {
+                                          handleAccountNumberUpdate(
+                                            acc.id,
+                                            editingAccountNumber
+                                          );
+                                        } else if (e.key === "Escape") {
+                                          setEditingAccountId(null);
+                                          setEditingAccountNumber("");
+                                        }
+                                      }}
+                                      autoFocus
+                                    />
+                                    <button
+                                      onClick={() =>
+                                        handleAccountNumberUpdate(
+                                          acc.id,
+                                          editingAccountNumber
+                                        )
+                                      }
+                                      className="p-1 text-green-600 hover:text-green-800 rounded hover:bg-green-50"
+                                      title="Save changes"
+                                    >
+                                      <Check className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                      onClick={() => {
+                                        setEditingAccountId(null);
+                                        setEditingAccountNumber("");
+                                      }}
+                                      className="p-1 text-red-600 hover:text-red-800 rounded hover:bg-red-50"
+                                      title="Cancel"
+                                    >
+                                      <X className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <>
+                                    <span
+                                      onClick={() => {
+                                        setFormData(prev => ({ ...prev, accountNo: acc.number }));
+                                        setAccountNumberSearch(acc.number);
+                                        setShowAccountNumberDropdown(false);
+                                      }}
+                                      className="flex-grow"
+                                    >
+                                      {acc.number}
+                                    </span>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setEditingAccountId(acc.id);
+                                        setEditingAccountNumber(acc.number);
+                                      }}
+                                      className="p-1 text-blue-600 hover:text-blue-800 rounded hover:bg-blue-50"
+                                      title="Edit account number"
+                                    >
+                                      <Edit className="w-4 h-4" />
+                                    </button>
+                                  </>
+                                )}
                               </div>
                             ))
                           ) : (
@@ -943,61 +1091,54 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
                         if (!e.target.checked) {
                           setGstVatAmount("");
                           setGstVatPercentage("");
+                        } else {
+                          const defaultPercentage = getDefaultGstPercentage();
+                          setGstVatPercentage(defaultPercentage);
+                          const calculatedAmount = calculateGstAmount(formData.amount, defaultPercentage);
+                          setGstVatAmount(calculatedAmount);
                         }
                       }}
                       className="form-checkbox h-4 w-4 text-blue-600"
                     />
                     GST/VAT
                   </label>
-                  {showGstVat && (
-                    <div className="flex gap-4">
-                      <div className="flex-1">
-                        <label className="block text-xs text-gray-500 mb-1">GST/VAT Amount</label>
-                        <input
-                          type="number"
-                          value={gstVatAmount}
-                          disabled={gstVatInputMode === "percentage"}
-                          onFocus={() => setGstVatInputMode("amount")}
-                          onChange={e => {
-                            setGstVatAmount(e.target.value);
-                            const amt = parseFloat(e.target.value);
-                            const txnAmt = parseFloat(formData.amount);
-                            if (txnAmt && amt >= 0) {
-                              setGstVatPercentage(((amt / txnAmt) * 100).toFixed(2));
-                            } else {
-                              setGstVatPercentage("");
-                            }
-                          }}
-                          className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
-                          placeholder="GST/VAT Amount"
-                          min="0"
-                        />
-                      </div>
-                      <div className="flex-1">
-                        <label className="block text-xs text-gray-500 mb-1">GST/VAT %</label>
-                        <input
-                          type="number"
-                          value={gstVatPercentage}
-                          disabled={gstVatInputMode === "amount"}
-                          onFocus={() => setGstVatInputMode("percentage")}
-                          onChange={e => {
-                            setGstVatPercentage(e.target.value);
-                            const perc = parseFloat(e.target.value);
-                            const txnAmt = parseFloat(formData.amount);
-                            if (txnAmt && perc >= 0) {
-                              setGstVatAmount(((perc / 100) * txnAmt).toFixed(2));
-                            } else {
-                              setGstVatAmount("");
-                            }
-                          }}
-                          className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
-                          placeholder="GST/VAT %"
-                          min="0"
-                          max="100"
-                        />
-                      </div>
+                  <div className="flex gap-4">
+                    <div className="flex-1">
+                      <label className="block text-xs text-gray-500 mb-1">GST/VAT Amount</label>
+                      <input
+                        type="number"
+                        value={gstVatAmount}
+                        disabled={!showGstVat || gstVatPercentage !== ""}
+                        onChange={e => {
+                          const newAmount = e.target.value;
+                          setGstVatAmount(newAmount);
+                          setGstVatPercentage("");
+                        }}
+                        className={`w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-black ${
+                          !showGstVat || gstVatPercentage !== "" ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'
+                        }`}
+                        placeholder="Enter amount"
+                        min="0"
+                        step="0.01"
+                      />
                     </div>
-                  )}
+                    <div className="flex-1">
+                      <label className="block text-xs text-gray-500 mb-1">GST/VAT %</label>
+                      <input
+                        type="number"
+                        value={gstVatPercentage}
+                        disabled={!showGstVat}
+                        onChange={e => handleGstPercentageChange(e.target.value)}
+                        className={`w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-black ${
+                          !showGstVat ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'
+                        }`}
+                        placeholder="Enter percentage"
+                        min="0"
+                        max="100"
+                        step="0.01"
+                      />
+                    </div>
+                  </div>
                 </div>
 
                 <div className="mb-4" ref={categoryRef}>
@@ -1015,6 +1156,11 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
                         onChange={(e) => {
                           setCategorySearch(e.target.value);
                           setShowCategoryDropdown(true);
+                          // Set the custom category 
+                          setFormData(prev => ({
+                            ...prev,
+                            category: e.target.value
+                          }));
                         }}
                         className="w-full bg-transparent focus:outline-none text-sm text-black"
                         placeholder="Search or type category name"
@@ -1048,12 +1194,79 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
                                 key={category.id}
                                 className="px-4 py-2 hover:bg-blue-50 cursor-pointer text-black flex justify-between items-center"
                               >
-                                <span
-                                  onClick={() => handleSelect("category", category)}
-                                  className="flex-grow"
-                                >
-                                  {category.name}
-                                </span>
+                                {editingCategoryId === category.id ? (
+                                  <div className="flex items-center gap-2 w-full">
+                                    <input
+                                      type="text"
+                                      value={editingCategoryName}
+                                      onChange={(e) =>
+                                        setEditingCategoryName(e.target.value)
+                                      }
+                                      className="flex-grow p-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
+                                      onKeyDown={(e) => {
+                                        if (e.key === "Enter") {
+                                          handleCategoryNameUpdate(
+                                            category.id,
+                                            editingCategoryName
+                                          );
+                                        } else if (e.key === "Escape") {
+                                          setEditingCategoryId(null);
+                                          setEditingCategoryName("");
+                                        }
+                                      }}
+                                      autoFocus
+                                    />
+                                    <button
+                                      onClick={() =>
+                                        handleCategoryNameUpdate(
+                                          category.id,
+                                          editingCategoryName
+                                        )
+                                      }
+                                      className="p-1 text-green-600 hover:text-green-800 rounded hover:bg-green-50"
+                                      title="Save changes"
+                                    >
+                                      <Check className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                      onClick={() => {
+                                        setEditingCategoryId(null);
+                                        setEditingCategoryName("");
+                                      }}
+                                      className="p-1 text-red-600 hover:text-red-800 rounded hover:bg-red-50"
+                                      title="Cancel"
+                                    >
+                                      <X className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <>
+                                    <span
+                                      onClick={() => {
+                                        setFormData((prev) => ({
+                                          ...prev,
+                                          category: category.id,
+                                        }));
+                                        setShowCategoryDropdown(false);
+                                        setCategorySearch(category.name);
+                                      }}
+                                      className="flex-grow"
+                                    >
+                                      {category.name}
+                                    </span>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setEditingCategoryId(category.id);
+                                        setEditingCategoryName(category.name);
+                                      }}
+                                      className="p-1 text-blue-600 hover:text-blue-800 rounded hover:bg-blue-50"
+                                      title="Edit category name"
+                                    >
+                                      <Edit className="w-4 h-4" />
+                                    </button>
+                                  </>
+                                )}
                               </div>
                             ))
                           ) : (
@@ -1249,14 +1462,8 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
               </div>
 
               <div className="flex-1 border-l pl-6">
-                <h4 className="font-medium text-gray-700 mb-3">
-                  Upload Receipt
-                </h4>
-                <div
-                  className="border-2 border-dashed border-gray-300 rounded-lg p-6 flex flex-col items-center justify-center h-64 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer"
-                  onDragOver={handleDragOver}
-                  onDrop={handleFileDrop}
-                >
+                <h4 className="font-medium text-gray-700 mb-3">Upload Receipt</h4>
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 flex flex-col items-center justify-center h-64 bg-gray-50">
                   <div className="w-16 h-16 mb-4 text-blue-500 flex items-center justify-center rounded-full bg-blue-100">
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
@@ -1271,39 +1478,18 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
                       <path d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
                     </svg>
                   </div>
-                  {files.length > 0 ? (
-                    <div className="w-full">
-                      <p className="mb-2 text-sm font-medium text-gray-700">
-                        Selected Files:
-                      </p>
-                      <ul className="text-xs text-gray-600 mb-4 max-h-20 overflow-y-auto">
-                        {files.map((file, index) => (
-                          <li key={index} className="truncate">
-                            {file.name}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  ) : (
-                    <>
-                      <p className="mb-2 text-sm font-medium text-gray-700">
-                        Drag & Drop files here
-                      </p>
-                      <p className="text-xs text-gray-500 mb-4">or</p>
-                    </>
-                  )}
+                  <p className="mb-2 text-sm font-medium text-gray-700">Drag & Drop files here</p>
+                  <p className="text-xs text-gray-500 mb-4">or</p>
                   <label className="px-4 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors cursor-pointer">
                     Browse Files
                     <input
                       type="file"
                       className="hidden"
-                      onChange={handleFileChange}
+                      onChange={(e) => setFiles(Array.from(e.target.files))}
                       multiple
                     />
                   </label>
-                  <p className="text-xs text-gray-500 mt-2">
-                    Supported formats: JPG, PNG, PDF
-                  </p>
+                  <p className="text-xs text-gray-500 mt-2">Supported formats: JPG, PNG, PDF</p>
                 </div>
               </div>
             </form>
@@ -1382,13 +1568,13 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
                 </div>
               )}
             </div>
-            <div className="p-4 border-t flex justify-end">
+            <div className="p-4 border-t flex justify-between">
               <button
                 onClick={() => {
                   setShowReceiptModal(false);
                   setCurrentReceipt(null);
                 }}
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 ml-auto"
               >
                 Close
               </button>
