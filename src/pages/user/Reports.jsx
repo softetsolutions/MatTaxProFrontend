@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import DateRangeFilter from "../../components/DateRangeFilter";
 import { fetchTransactions } from "../../utils/transactionsApi";
 
+
 export default function Reports() {
   const [endDate, setEndDate] = useState("");
   const [startDate, setStartDate] = useState("");
@@ -22,10 +23,7 @@ export default function Reports() {
       setLoading(true);
       try {
         const data = await fetchTransactions(null, navigate);
-        console.log("Transaction dates:", data.map(txn => txn.date));
-        console.log("Sample transaction:", data[0]);
-
-
+        
         setAllTransaction(data || []);
       } catch (err) {
         setError(err.message || "Failed to fetch transactions");
@@ -37,31 +35,25 @@ export default function Reports() {
     fetchTransaction();
   }, []);
 
-  // ✅ Filter by date range
-const parseToISO = (input) => {
+  //  Filter by date range
+const parseInputDate = (input, isEnd = false) => {
   if (!input) return null;
-  const parts = input.split("-");
-  if (parts[0].length === 2) {
-   
-    return `20${parts[0]}-${parts[1]}-${parts[2]}`;
-  } else if (parts[2].length === 4) {
-   
-    return `${parts[2]}-${parts[1]}-${parts[0]}`;
+  const date = new Date(input);
+  if (isEnd) {
+    date.setHours(23, 59, 59, 999);
   }
-  return input;
+  return date;
 };
 
 const filteredTransactions = allTransaction.filter((txn) => {
-  const txnDateStr = txn.Date; 
-  if (!txnDateStr) return true;
+  const txnDate = new Date(txn.created_at);
+  const start = parseInputDate(startDate);
+  const end = parseInputDate(endDate, true); // include whole day
 
-  const txnDate = new Date(parseToISO(txnDateStr));
-  const start = startDate ? new Date(parseToISO(startDate)) : null;
-  const end = endDate ? new Date(parseToISO(endDate)) : null;
+  console.log("txnDate:", txnDate, "start:", start, "end:", end);
 
   return (!start || txnDate >= start) && (!end || txnDate <= end);
 });
-
 
   // ✅ Total In/Out
   const totalIn = filteredTransactions
@@ -103,6 +95,61 @@ const filteredTransactions = allTransaction.filter((txn) => {
     );
   }
 
+
+const handleDownloadCSV = () => {
+  const lines = [];
+
+  // Header
+  lines.push("Filters");
+  lines.push("Search,,between,dates");
+  lines.push(`${startDate || ""} To ${endDate || ""}`);
+  lines.push("Vendor");
+  lines.push("transaction description");
+  lines.push("");
+
+  // Total summary
+  lines.push(`Total money in,${totalIn}`);
+  lines.push(`Total money out,${totalOut}`);
+  lines.push("");
+
+  // Money In by Vendor
+  lines.push("Money In");
+  lines.push("Aggregation by vendor");
+  Object.entries(vendorSummary).forEach(([vendor, totals]) => {
+    if (totals.moneyIn > 0) {
+      lines.push(`${vendor},${totals.moneyIn}`);
+    }
+  });
+  lines.push("");
+
+  // Money Out by Vendor
+  lines.push("Money Out");
+  lines.push("Aggregation by vendor");
+  Object.entries(vendorSummary).forEach(([vendor, totals]) => {
+    if (totals.moneyOut > 0) {
+      lines.push(`${vendor},${totals.moneyOut}`);
+    }
+  });
+
+  lines.push("");
+ 
+
+  // Convert to CSV string
+  const csvContent = lines.join("\n");
+
+  // Trigger download
+  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "report.csv";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+};
+
+
   return (
     <div className="space-y-6 p-4">
       <div className="flex items-center justify-between">
@@ -137,6 +184,15 @@ const filteredTransactions = allTransaction.filter((txn) => {
       </div>
 
       <div className="mt-6">
+        <button
+       onClick={handleDownloadCSV}
+        className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+       >
+       Export as CSV
+       </button>
+
+
+
         <h2 className="text-xl font-semibold text-gray-800 mb-4">Vendor Wise Summary</h2>
         <table className="w-full text-sm border bg-white shadow">
           <thead className="bg-gray-100">
