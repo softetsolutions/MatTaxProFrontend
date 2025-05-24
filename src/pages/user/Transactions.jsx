@@ -20,12 +20,12 @@ import {
   updateTransaction,
   deleteTransaction,
 } from "../../utils/transactionsApi";
-import { fetchAllVendors, updateVendor } from "../../utils/vendorApi";
+import { fetchAllVendors, updateVendor, createVendor } from "../../utils/vendorApi";
 import { fetchAllCategories, updateCategory, createCategory } from "../../utils/categoryApi";
 import { fetchAllAccounts, updateAccount, createAccount } from "../../utils/accountApi";
 import { downloadCSV } from "../../utils/convertAndDownloadCsv";
 import UploadCsv from "./UploadCsv";
-import { fetchReceipt } from "../../utils/receiptApi";
+import { fetchReceipt, handleFileUpload as handleReceiptUpload } from "../../utils/receiptApi";
 import DateRangeFilter from "../../components/DateRangeFilter";
 import { filterTransactionsByDate } from "../../utils/dateFilter";
 import TransactionTypeFilter from "../../components/TransactionTypeFilter";
@@ -88,8 +88,7 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
   const [showGstVat, setShowGstVat] = useState(false);
   const [gstVatAmount, setGstVatAmount] = useState("");
   const [gstVatPercentage, setGstVatPercentage] = useState("");
-
-  console.log("accountOptions",accountOptions)
+  const [isExtractingReceipt, setIsExtractingReceipt] = useState(false);
 
   // Initialize userRole once when component mounts
   useEffect(() => {
@@ -222,8 +221,10 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
     const missingFields = Object.entries(requiredFields)
       .filter(([key]) => {
         if (key === 'category') {
-          // Check if either a category ID is selected or a custom category name is entered
           return !formData[key] && !categorySearch;
+        }
+        if (key === 'vendor') {
+          return !formData[key] && !vendorSearch;
         }
         return !formData[key];
       })
@@ -263,6 +264,7 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
 
         let categoryId = formData.category;
         let accountId = formData.accountNo;
+        let vendorId = formData.vendor;
         
         // If there's a custom category but no category ID, create a new category
         if (!categoryId && categorySearch) {
@@ -282,7 +284,23 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
           }
         }
 
-        // If  no account ID, create a new account
+        // If there's a custom vendor name in the search field, create a new vendor
+        if (vendorSearch && !vendorId) {
+          try {
+            const newVendor = await createVendor(
+              vendorSearch,
+              userRole === "accountant" ? selectedUserId : userId
+            );
+            vendorId = newVendor.id;
+            
+            // Update the vendors list
+            setVendorOptions(prev => [...prev, { id: newVendor.id, name: vendorSearch }]);
+          } catch (err) {
+            console.error("Error creating new vendor:", err);
+            toast.error("Failed to create new vendor");
+            return;
+          }
+        }
         if (!accountId && accountNumberSearch) {
           try {
             const newAccount = await createAccount(
@@ -299,16 +317,20 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
             return;
           }
         }
+        if (!vendorId) {
+          toast.error("Please select or create a valid vendor");
+          return;
+        }
 
         const transactionData = {
           amount: parseFloat(formData.amount),
           category: categoryId,
           type: formData.type,
-          vendorId: formData.vendor,
+          vendorId: vendorId,
           desc3: formData.desc3,
           isDeleted: false,
           userId: userRole === "accountant" ? selectedUserId : userId,
-          "accountNo": accountId || formData.accountNo || null
+          accountNo: accountId || formData.accountNo || null
         };
 
         if (files.length > 0) {
@@ -595,6 +617,55 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
     }
   };
 
+  const handleFileUpload = async (e) => {
+    const uploadedFiles = Array.from(e.target.files || []);
+    if (uploadedFiles.length === 0) return;
+
+    setFiles(uploadedFiles);
+    
+    try {
+      setIsExtractingReceipt(true);
+      const result = await handleReceiptUpload(
+        uploadedFiles[0],
+        vendorOptions,
+        categoryOptions
+      );
+
+      if (!result.matchingVendor && result.extractedData.merchant) {
+        setVendorSearch(result.extractedData.merchant);
+      }
+      if (!result.matchingCategory && result.extractedData.category) {
+        setCategorySearch(result.extractedData.category);
+      }
+      // Update form data 
+      const newFormData = {
+        ...formData,
+        amount: result.extractedData.amount || '',
+        desc3: result.extractedData.description || '',
+        type: result.extractedData.type,
+        vendor: result.matchingVendor?.id || '',
+        category: result.matchingCategory?.id || '',
+        accountNo: result.extractedData.accountNumber || ''
+      };
+      setFormData(newFormData);
+
+      // Update search fields
+      if (result.extractedData.merchant) {
+        setVendorSearch(result.extractedData.merchant);
+      }
+      if (result.extractedData.category) {
+        setCategorySearch(result.extractedData.category);
+      }
+
+      toast.success('Receipt data extracted');
+    } catch (error) {
+      console.error('Error in handleFileUpload:', error);
+      toast.error(error.message || 'Failed to extract receipt data');
+    } finally {
+      setIsExtractingReceipt(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-screen">
@@ -834,7 +905,7 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
                           {txn.amount}
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-900">
-                          {txn.category}
+                          {categoryOptions.find((c) => String(c.id) === String(txn.category))?.name || txn.category}
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-900 capitalize">
                           {txn.type}
@@ -1302,9 +1373,10 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
                         onChange={(e) => {
                           setVendorSearch(e.target.value);
                           setShowVendorDropdown(true);
+
                           setFormData((prev) => ({
                             ...prev,
-                            vendor: e.target.value,
+                            vendor: "",
                           }));
                         }}
                         className="w-full bg-transparent focus:outline-none text-sm text-black"
@@ -1323,9 +1395,10 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
                               value={vendorSearch}
                               onChange={(e) => {
                                 setVendorSearch(e.target.value);
+                                // Clear the vendor ID when typing a new name
                                 setFormData((prev) => ({
                                   ...prev,
-                                  vendor: e.target.value,
+                                  vendor: "",
                                 }));
                               }}
                               className="w-full p-2 bg-transparent focus:outline-none text-sm text-black"
@@ -1334,7 +1407,13 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
                             />
                             {vendorSearch && (
                               <button
-                                onClick={() => setVendorSearch("")}
+                                onClick={() => {
+                                  setVendorSearch("");
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    vendor: "",
+                                  }));
+                                }}
                                 className="p-2"
                               >
                                 <X className="w-4 h-4 text-gray-400" />
@@ -1400,10 +1479,10 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
                                       onClick={() => {
                                         setFormData((prev) => ({
                                           ...prev,
-                                          vendor: vendor.id, // Store vendor ID instead of name
+                                          vendor: vendor.id,
                                         }));
                                         setShowVendorDropdown(false);
-                                        setVendorSearch(vendor.name); // Show the vendor name in the input
+                                        setVendorSearch(vendor.name);
                                       }}
                                       className="flex-grow"
                                     >
@@ -1467,7 +1546,29 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
 
               <div className="flex-1 border-l pl-6">
                 <h4 className="font-medium text-gray-700 mb-3">Upload Receipt</h4>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 flex flex-col items-center justify-center h-64 bg-gray-50">
+                <div 
+                  className={`border-2 border-dashed border-gray-300 rounded-lg p-6 flex flex-col items-center justify-center h-64 bg-gray-50 relative ${
+                    isExtractingReceipt ? 'pointer-events-none' : ''
+                  }`}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const files = e.dataTransfer.files;
+                    if (files.length > 0) {
+                      handleFileUpload({ target: { files } });
+                    }
+                  }}
+                >
+                  {isExtractingReceipt && (
+                    <div className="absolute inset-0 bg-white/80 flex items-center justify-center flex-col gap-3 z-10">
+                      <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500"></div>
+                      <p className="text-sm text-gray-600">Extracting data from receipt...</p>
+                    </div>
+                  )}
                   <div className="w-16 h-16 mb-4 text-blue-500 flex items-center justify-center rounded-full bg-blue-100">
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
@@ -1484,13 +1585,16 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
                   </div>
                   <p className="mb-2 text-sm font-medium text-gray-700">Drag & Drop files here</p>
                   <p className="text-xs text-gray-500 mb-4">or</p>
-                  <label className="px-4 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors cursor-pointer">
+                  <label className={`px-4 py-2 bg-blue-600 text-white text-sm rounded transition-colors ${
+                    isExtractingReceipt ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-700 cursor-pointer'
+                  }`}>
                     Browse Files
                     <input
                       type="file"
                       className="hidden"
-                      onChange={(e) => setFiles(Array.from(e.target.files))}
-                      multiple
+                      onChange={handleFileUpload}
+                      accept="image/*,.pdf"
+                      disabled={isExtractingReceipt}
                     />
                   </label>
                   <p className="text-xs text-gray-500 mt-2">Supported formats: JPG, PNG, PDF</p>
