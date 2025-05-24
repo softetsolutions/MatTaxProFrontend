@@ -20,6 +20,7 @@ import ForgotPassword from "./pages/ForgotPassword";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsAndConditions from "./pages/TermsAndConditions";
 import ResetPassword from "./pages/ResetPassword";
+import Reports from "./pages/user/Reports";
 
 
 function App() {
@@ -116,6 +117,15 @@ function App() {
             element={
               <ProtectRouteComp routeName={"allAccountants"}>
                 <AllAccountants />
+              </ProtectRouteComp>
+            }
+          />
+          {/*  */}
+          <Route
+            path="report"
+            element={
+              <ProtectRouteComp routeName={"report"}>
+                <Reports />
               </ProtectRouteComp>
             }
           />

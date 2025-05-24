@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { toast } from "react-toastify";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import ReCAPTCHA from "react-google-recaptcha";
 import { Eye, EyeOff, ArrowLeft } from "lucide-react";
 import Header from "../components/Header";
 
@@ -13,10 +14,12 @@ export default function UserSignupPage() {
     password: "",
     confirmPassword: "",
   });
+  const recaptchaRef = useRef();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
+  const [recaptchaToken, setRecaptchaToken] = useState(null);
   const { role } = useParams();
 
   const handleChange = (e) => {
@@ -33,6 +36,10 @@ export default function UserSignupPage() {
         return newErrors;
       });
     }
+  };
+
+  const handleRecaptchaChange = (token) => {
+    setRecaptchaToken(token);
   };
 
   // validation
@@ -68,6 +75,10 @@ export default function UserSignupPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    if (!recaptchaToken) {
+      setErrors("Please complete the reCAPTCHA verification.");
+      return;
+    }
     // if (!validateForm()) return;
 
     setIsLoading(true);
@@ -96,7 +107,12 @@ export default function UserSignupPage() {
       toast.success("Wohha signed up successfully!, PLs Login");
       navigate("/login");
     } catch {
+      console.error("Error message:", e.message);
       setErrors({ form: "An error occurred. Please try again." });
+      if (recaptchaRef.current) {
+        recaptchaRef.current.reset();
+      }
+      setRecaptchaToken(null);
     } finally {
       setIsLoading(false);
     }
@@ -269,6 +285,15 @@ export default function UserSignupPage() {
                       {errors.confirmPassword}
                     </p>
                   )}
+                </div>
+
+                 <div className="flex justify-center">
+                  <ReCAPTCHA
+                    ref={recaptchaRef}
+                    sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY}
+                    onChange={handleRecaptchaChange}
+                    theme="dark"
+                  />
                 </div>
 
                 {/* Terms and Privacy Notice */}

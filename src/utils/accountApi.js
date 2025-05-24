@@ -41,7 +41,7 @@ export const createAccount = async (accountData, userId) => {
         credentials: "include",
         body: JSON.stringify({
           userId,
-          name: accountData
+          accountNo: accountData
         }),
       }
     );
