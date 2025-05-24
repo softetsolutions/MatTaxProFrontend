@@ -79,7 +79,7 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
   const [editingAccountId, setEditingAccountId] = useState(null);
   const [editingAccountNumber, setEditingAccountNumber] = useState("");
   const filteredAccountNumbers = accountOptions.filter((acc) =>
-    acc.number.toLowerCase().includes(accountNumberSearch.toLowerCase())
+    acc.number?.toLowerCase()?.includes(accountNumberSearch.toLowerCase())
   );
   const [editingCategoryId, setEditingCategoryId] = useState(null);
   const [editingCategoryName, setEditingCategoryName] = useState("");
@@ -88,6 +88,8 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
   const [showGstVat, setShowGstVat] = useState(false);
   const [gstVatAmount, setGstVatAmount] = useState("");
   const [gstVatPercentage, setGstVatPercentage] = useState("");
+
+  console.log("accountOptions",accountOptions)
 
   // Initialize userRole once when component mounts
   useEffect(() => {
@@ -144,7 +146,7 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
         const accounts = data[3].value.reduce((acc, account) => {
           let accountData = {
             id: account.id,
-            number: account.name, // Using name field as the display number
+            number: account.accountNo, // Using name field as the display number
           };
           acc.push(accountData);
           return acc;
@@ -352,6 +354,8 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
         });
         setFiles([]);
         setVendorSearch("");
+        setAccountNumberSearch("");
+        setCategorySearch("");
       }
     } catch (err) {
       console.error("Operation failed:", err);
@@ -1023,7 +1027,7 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
                                     </button>
                                   </div>
                                 ) : (
-                                  <>
+                                  <div className="flex items-center gap-2 w-full">
                                     <span
                                       onClick={() => {
                                         setFormData(prev => ({ ...prev, accountNo: acc.number }));
@@ -1045,7 +1049,7 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
                                     >
                                       <Edit className="w-4 h-4" />
                                     </button>
-                                  </>
+                                  </div>
                                 )}
                               </div>
                             ))
