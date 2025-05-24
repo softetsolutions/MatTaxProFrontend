@@ -1,5 +1,6 @@
 import { getAuthInfo } from "./auth";
 import { handleUnauthoriz } from "./helperFunction";
+
 export const fetchTransactions = async (selectedUserId = null, navigate) => {
   try {
     const { token, userId, role } = getAuthInfo();
@@ -9,9 +10,7 @@ export const fetchTransactions = async (selectedUserId = null, navigate) => {
       if (!selectedUserId) {
         return [];
       }
-      url = `${
-        import.meta.env.VITE_BASE_URL
-      }/transaction?userId=${selectedUserId}&accountId=${userId}`;
+      url = `${import.meta.env.VITE_BASE_URL}/transaction?userId=${selectedUserId}&accountId=${userId}`;
     } else {
       url = `${import.meta.env.VITE_BASE_URL}/transaction?userId=${userId}`;
     }
@@ -34,7 +33,11 @@ export const fetchTransactions = async (selectedUserId = null, navigate) => {
     }
 
     const data = await response.json();
-    return data;
+    // Ensure vendorname is mapped from vendor if not present
+    return data.map(txn => ({
+      ...txn,
+      vendorname: txn.vendorname || txn.vendor || "Unknown"
+    }));
   } catch (err) {
     console.error("Error fetching transactions:", err);
     throw err;
@@ -50,9 +53,7 @@ export const createTransaction = async (transactionData, selectedUserId) => {
       if (!selectedUserId) {
         throw new Error("No user selected for transaction creation");
       }
-      url = `${
-        import.meta.env.VITE_BASE_URL
-      }/transaction?userId=${selectedUserId}&accountId=${userId}`;
+      url = `${import.meta.env.VITE_BASE_URL}/transaction?userId=${selectedUserId}&accountId=${userId}`;
     } else {
       url = `${import.meta.env.VITE_BASE_URL}/transaction?userId=${userId}`;
     }
@@ -100,13 +101,9 @@ export const updateTransaction = async (
       if (!selectedUserId) {
         throw new Error("No user selected for transaction update");
       }
-      url = `${
-        import.meta.env.VITE_BASE_URL
-      }/transaction/update?userId=${selectedUserId}&accountId=${userId}`;
+      url = `${import.meta.env.VITE_BASE_URL}/transaction/update?userId=${selectedUserId}&accountId=${userId}`;
     } else {
-      url = `${
-        import.meta.env.VITE_BASE_URL
-      }/transaction/update?userId=${userId}`;
+      url = `${import.meta.env.VITE_BASE_URL}/transaction/update?userId=${userId}`;
     }
 
     const response = await fetch(url, {
@@ -151,13 +148,9 @@ export const deleteTransaction = async (
       if (!selectedUserId) {
         throw new Error("No user selected for transaction deletion");
       }
-      url = `${
-        import.meta.env.VITE_BASE_URL
-      }/transaction?userId=${selectedUserId}&accountId=${userId}&transactionId=${transactionId}`;
+      url = `${import.meta.env.VITE_BASE_URL}/transaction?userId=${selectedUserId}&accountId=${userId}&transactionId=${transactionId}`;
     } else {
-      url = `${
-        import.meta.env.VITE_BASE_URL
-      }/transaction?userId=${userId}&transactionId=${transactionId}`;
+      url = `${import.meta.env.VITE_BASE_URL}/transaction?userId=${userId}&transactionId=${transactionId}`;
     }
 
     const response = await fetch(url, {
@@ -182,3 +175,37 @@ export const deleteTransaction = async (
     throw err;
   }
 };
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
