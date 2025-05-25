@@ -65,3 +65,37 @@ export const updateVendor = async (vendorId, name) => {
     throw err;
   }
 };
+
+export const createVendor = async (name, userId) => {
+  try {
+    const response = await fetch(
+      `${import.meta.env.VITE_BASE_URL}/vendor/create`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          userId,
+          name,
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        handleUnauthoriz();
+        throw new Error("Unauthorized: Please check your authentication");
+      }
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Failed to create vendor");
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (err) {
+    console.error("Error creating vendor:", err);
+    throw err;
+  }
+};
