@@ -202,3 +202,45 @@ export const confirmDeleteAccount = async (token) => {
 
   return true;
 };
+
+export const resetPassword = async (token, password) => {
+  const response = await fetch(
+    `${import.meta.env.VITE_BASE_URL}/auth/reset-password?token=${token}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password }),
+    }
+  );
+  
+  if (response.status !== 200) {
+    const errorData = await response.json();
+    throw new Error(errorData.message || "Error resetting password");
+  }
+  
+  return response.json();
+};
+
+export const adminResetPassword = async (userId, password) => {
+  const { token } = getAuthInfo();
+
+  const response = await fetch(
+    `${import.meta.env.VITE_BASE_URL}/auth/reset-password?id=${userId}`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: token,
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+      body: JSON.stringify({ password }),
+    }
+  );
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.message || "Failed to reset password");
+  }
+
+  return response.json();
+}; 

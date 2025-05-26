@@ -4,7 +4,7 @@ import {
   fetchAllUsers,
   fetchAllAccountants,
   accountLockUnlock,
-  // changeUserPassword,
+  adminResetPassword,
 } from "../../utils/user";
 import { handleUnauthoriz } from "../../utils/helperFunction";
 import { useNavigate } from "react-router-dom";
@@ -101,7 +101,7 @@ export default function UserManagement({ role }) {
         const userId =
           role === "user" ? selectedUser.user_id : selectedUser.accountant_id;
 
-        // await changeUserPassword(userId, newPassword);
+        await adminResetPassword(userId, newPassword);
         toast.success("Password changed successfully");
         setShowPasswordModal(false);
         setSelectedUser(null);
