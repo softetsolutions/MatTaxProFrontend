@@ -21,6 +21,7 @@ import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsAndConditions from "./pages/TermsAndConditions";
 import ResetPassword from "./pages/ResetPassword";
 import Reports from "./pages/user/Reports";
+import ConfirmDeleteAccount from "./pages/user/ConfirmDeleteAccount";
 
 
 function App() {
@@ -36,6 +37,7 @@ function App() {
         <Route path="/verifyByGoogle/" element={<VerifyByGoogle />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/resetPassword/:token" element={<ResetPassword />} />
+        <Route path="/confirmDeleteAccount" element={<ConfirmDeleteAccount/>}/>
         <Route path="/privacy-policy" element={<PrivacyPolicy />} />
         <Route path="/terms-conditions" element={<TermsAndConditions />} />
         {/* user */}

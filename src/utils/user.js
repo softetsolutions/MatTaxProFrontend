@@ -157,3 +157,48 @@ export const accountLockUnlock = async (userId, isLock) => {
   const data = await response.json();
   return data;
 };
+
+export const sendDeleteEmail = async () => {
+  const { token } = getAuthInfo();
+
+  const response = await fetch(
+    `${import.meta.env.VITE_BASE_URL}/user/send-delete-email`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: token,
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+    }
+  );
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || "Failed to send deletion email");
+  }
+
+  return data;
+};
+
+export const confirmDeleteAccount = async (token) => {
+  const response = await fetch(
+    `${import.meta.env.VITE_BASE_URL}/user/confirm-delete`,
+    {
+      method: "DELETE",
+      headers: {
+        Authorization: token,
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+    }
+  );
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.message || "Failed to delete account");
+  }
+
+  return true;
+};

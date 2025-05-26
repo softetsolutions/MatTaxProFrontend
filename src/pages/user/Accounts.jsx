@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import { toast } from "react-toastify";
-import { fetchUserDetails, updateUserDetails } from "../../utils/user";
-import { User, Mail, Phone, MapPin, Edit2, X, Check } from "lucide-react";
+import { fetchUserDetails, updateUserDetails, sendDeleteEmail } from "../../utils/user";
+import { User, Mail, Phone, MapPin, Edit2, X, Check, Trash2 } from "lucide-react";
 import PhoneInput from "react-phone-input-2";
 import "react-phone-input-2/lib/style.css";
+import ConfirmationModal from "../../components/ConfirmationModal";
 
 export default function AccountPage() {
   const [userData, setUserData] = useState({
@@ -20,6 +21,7 @@ export default function AccountPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({ ...userData });
   const [isLoading, setIsLoading] = useState(true);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   useEffect(() => {
     const loadUserData = async () => {
@@ -65,6 +67,17 @@ export default function AccountPage() {
   const handleCancel = () => {
     setFormData({ ...userData });
     setIsEditing(false);
+  };
+
+  const handleDeleteAccount = async () => {
+    try {
+      await sendDeleteEmail();
+      toast.success("Account deletion request sent. Please check your email for confirmation.");
+      setShowDeleteModal(false);
+    } catch (error) {
+      console.error("Delete account error:", error);
+      toast.error(error.message || "Failed to send deletion email. Please try again.");
+    }
   };
 
   // Get user initials for avatar
@@ -381,11 +394,43 @@ export default function AccountPage() {
                     ))}
                   </div>
                 </div>
+
+                {/* Delete Account Section */}
+                <div className="pt-8 border-t border-gray-100">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Danger Zone</h3>
+                  <div className="bg-red-50 rounded-lg p-4">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <h4 className="text-red-800 font-medium">Delete Account</h4>
+                        <p className="text-red-600 text-sm mt-1">
+                          Once you delete your account, there is no going back. Please be certain.
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => setShowDeleteModal(true)}
+                        className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all duration-200 shadow-sm"
+                      >
+                        <Trash2 size={16} />
+                        Delete Account
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
           </div>
         </div>
       </div>
+      <ConfirmationModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={handleDeleteAccount}
+        action="delete"
+        title="Delete Account"
+        message="Are you sure you want to delete your account? This action cannot be undone. A confirmation email will be sent to your registered email address."
+        confirmText="Yes, Delete Account"
+        confirmButtonClass="bg-red-600 hover:bg-red-700 focus:ring-red-300"
+      />
     </div>
   );
 }
