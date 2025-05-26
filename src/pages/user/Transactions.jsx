@@ -31,7 +31,7 @@ import { filterTransactionsByDate } from "../../utils/dateFilter";
 import TransactionTypeFilter from "../../components/TransactionTypeFilter";
 import { getDefaultGstPercentage, saveGstPercentage, calculateGstAmount } from "../../utils/gstVatUtils";
 
-export default function TransactionsPage({ setIsTransasctionLog }) {
+export default function TransactionsPage({ setIsTransasctionLog, selectedUserId: propSelectedUserId }) {
   const [sortField, setSortField] = useState("date");
   const [sortDirection, setSortDirection] = useState("asc");
   const [showModal, setShowModal] = useState(false);
@@ -54,7 +54,7 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
   const [showVendorDropdown, setShowVendorDropdown] = useState(false);
   const [userRole, setUserRole] = useState(null);
-  const [selectedUserId, setSelectedUserId] = useState(null);
+  const [selectedUserId, setSelectedUserId] = useState(propSelectedUserId || null);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [userSearch, setUserSearch] = useState("");
   const [users, setUsers] = useState([]);
@@ -96,6 +96,10 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
     const decoded = jwtDecode(token);
     setUserRole(decoded.role);
   }, []);
+
+  useEffect(() => {
+    setSelectedUserId(propSelectedUserId || null);
+  }, [propSelectedUserId]);
 
   // Fetch transaction data when selectedUserId changes
   useEffect(() => {

@@ -414,6 +414,34 @@ export default function InvitationPage() {
         onClose={() => setShowConfirmationModal(false)}
         onConfirm={handleConfirmAction}
         action={confirmationAction}
+        title={
+          confirmationAction === "approve"
+            ? "Approve Invitation"
+            : confirmationAction === "reject"
+            ? "Reject Invitation"
+            : "Confirm Action"
+        }
+        message={
+          confirmationAction === "approve"
+            ? "Are you sure you want to approve this invitation?"
+            : confirmationAction === "reject"
+            ? "Are you sure you want to reject this invitation?"
+            : "Are you sure you want to proceed?"
+        }
+        confirmText={
+          confirmationAction === "approve"
+            ? "Approve"
+            : confirmationAction === "reject"
+            ? "Reject"
+            : "Confirm"
+        }
+        confirmButtonClass={
+          confirmationAction === "approve"
+            ? "bg-green-600 hover:bg-green-700 focus:ring-green-300"
+            : confirmationAction === "reject"
+            ? "bg-red-600 hover:bg-red-700 focus:ring-red-300"
+            : undefined
+        }
       />
     </div>
   );

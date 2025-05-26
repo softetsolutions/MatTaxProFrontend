@@ -2,7 +2,7 @@ import { useState } from "react";
 import TransactionLog from "./TransactionLog";
 import TransactionsPage from "./Transactions";
 
-function RenderTransactionOrTransactionLog() {
+function RenderTransactionOrTransactionLog({ selectedUserId }) {
   const [isTransasctionLog, setIsTransasctionLog] = useState(null);
 
   return isTransasctionLog ? (
@@ -14,6 +14,7 @@ function RenderTransactionOrTransactionLog() {
     <TransactionsPage
       setIsTransasctionLog={setIsTransasctionLog}
       isTransasctionLog={isTransasctionLog}
+      selectedUserId={selectedUserId}
     />
   );
 }

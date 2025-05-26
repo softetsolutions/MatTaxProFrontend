@@ -173,13 +173,13 @@ const handleDownloadCSV = () => {
       </div>
 
       <div className="grid grid-cols-2 gap-6">
-        <div className="bg-green-100 p-4 rounded shadow">
-          <h2 className="text-lg font-semibold text-green-700">Total Money In</h2>
-          <p className="text-2xl font-bold">₹{totalIn.toFixed(2)}</p>
+        <div className="bg-gradient-to-br from-green-50 to-green-100 p-6 rounded-lg shadow-md border border-green-200">
+          <h2 className="text-lg font-semibold text-green-800 mb-2">Total Money In</h2>
+          <p className="text-3xl font-bold text-green-700">₹{totalIn.toFixed(2)}</p>
         </div>
-        <div className="bg-red-100 p-4 rounded shadow">
-          <h2 className="text-lg font-semibold text-red-700">Total Money Out</h2>
-          <p className="text-2xl font-bold">₹{totalOut.toFixed(2)}</p>
+        <div className="bg-gradient-to-br from-red-50 to-red-100 p-6 rounded-lg shadow-md border border-red-200">
+          <h2 className="text-lg font-semibold text-red-800 mb-2">Total Money Out</h2>
+          <p className="text-3xl font-bold text-red-700">₹{totalOut.toFixed(2)}</p>
         </div>
       </div>
 

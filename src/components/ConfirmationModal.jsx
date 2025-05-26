@@ -42,6 +42,14 @@ const ConfirmationModal = ({
   } else if (action === "delete") {
     Icon = Trash2;
     iconColor = "text-red-500";
+  } else if (action === "approve") {
+    Icon = Unlock;
+    iconColor = "text-green-600";
+    buttonClass = "bg-green-600 hover:bg-green-700 focus:ring-green-300";
+  } else if (action === "reject") {
+    Icon = Lock;
+    iconColor = "text-red-500";
+    buttonClass = "bg-red-600 hover:bg-red-700 focus:ring-red-300";
   }
 
   return (
@@ -90,7 +98,7 @@ ConfirmationModal.propTypes = {
   isOpen: PropTypes.bool.isRequired,
   onClose: PropTypes.func.isRequired,
   onConfirm: PropTypes.func.isRequired,
-  action: PropTypes.oneOf(["lock", "unlock", "delete"]),
+  action: PropTypes.oneOf(["lock", "unlock", "delete", "approve", "reject"]),
   title: PropTypes.string.isRequired,
   message: PropTypes.node.isRequired,
   confirmText: PropTypes.string,
