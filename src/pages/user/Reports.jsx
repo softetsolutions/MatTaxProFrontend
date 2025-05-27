@@ -167,8 +167,16 @@ const handleDownloadCSV = () => {
           setEndDate={setEndDate}
           onClear={clearDateFilters}
         />
-        <div className="text-sm text-gray-500">
-          {filteredTransactions.length} transaction(s) found
+        <div className="flex items-center gap-4">
+          <div className="text-sm text-gray-500">
+            {filteredTransactions.length} transaction(s) found
+          </div>
+          <button
+            onClick={handleDownloadCSV}
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          >
+            Export as CSV
+          </button>
         </div>
       </div>
 
@@ -184,15 +192,6 @@ const handleDownloadCSV = () => {
       </div>
 
       <div className="mt-6">
-        <button
-       onClick={handleDownloadCSV}
-        className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-       >
-       Export as CSV
-       </button>
-
-
-
         <h2 className="text-xl font-semibold text-gray-800 mb-4">Vendor Wise Summary</h2>
         <table className="w-full text-sm border bg-white shadow">
           <thead className="bg-gray-100">

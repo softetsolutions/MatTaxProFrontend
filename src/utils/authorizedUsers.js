@@ -156,3 +156,33 @@ export const fetchAccountants = async () => {
     throw err;
   }
 };
+
+export const searchAccountantByEmail = async (email) => {
+  try {
+    const { token } = getAuthInfo();
+
+    const response = await fetch(
+      `${import.meta.env.VITE_BASE_URL}/user/accountant-by-email/${email}`,
+      {
+        method: "GET",
+        headers: {
+          Authorization: token,
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+      }
+    );
+
+    if (!response.ok) {
+      if (response.status === 403) {
+        return null; // Accountant not found
+      }
+      throw new Error("Failed to search accountant");
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Error searching accountant:", error);
+    throw error;
+  }
+};
