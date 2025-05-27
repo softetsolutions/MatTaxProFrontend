@@ -162,7 +162,7 @@ export const sendDeleteEmail = async () => {
   const { token } = getAuthInfo();
 
   const response = await fetch(
-    `${import.meta.env.VITE_BASE_URL}/user/send-delete-email`,
+    `${import.meta.env.VITE_BASE_URL}/user/sendmail-for-delete-user`,
     {
       method: "POST",
       headers: {
@@ -184,11 +184,10 @@ export const sendDeleteEmail = async () => {
 
 export const confirmDeleteAccount = async (token) => {
   const response = await fetch(
-    `${import.meta.env.VITE_BASE_URL}/user/confirm-delete`,
+    `${import.meta.env.VITE_BASE_URL}/user/confirm-delete?token=${token}`,
     {
       method: "DELETE",
       headers: {
-        Authorization: token,
         "Content-Type": "application/json",
       },
       credentials: "include",
@@ -197,7 +196,7 @@ export const confirmDeleteAccount = async (token) => {
 
   if (!response.ok) {
     const errorData = await response.json();
-    throw new Error(errorData.message || "Failed to delete account");
+    throw new Error(errorData.error || "Failed to delete account");
   }
 
   return true;

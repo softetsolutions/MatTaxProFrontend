@@ -3,7 +3,6 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import { Trash2, AlertTriangle, X } from "lucide-react";
 import { confirmDeleteAccount } from "../../utils/user";
-import { getAuthInfo } from "../../utils/auth";
 
 export default function ConfirmDeleteAccount() {
   const [feedback, setFeedback] = useState("");
@@ -28,8 +27,7 @@ export default function ConfirmDeleteAccount() {
 
     try {
       setIsSubmitting(true);
-      const { token: authToken } = getAuthInfo();
-      await confirmDeleteAccount(authToken);
+      await confirmDeleteAccount(token);
       toast.success("Your account has been permanently deleted");
       navigate("/login");
     } catch (error) {
