@@ -1,16 +1,13 @@
-import { getAuthInfo } from "./auth";
 import { handleUnauthoriz } from "./helperFunction";
 
 export const fetchReceipt = async (receiptId, navigate) => {
   try {
-    const { token } = getAuthInfo();
 
     const url = `${import.meta.env.VITE_BASE_URL}/receipt/${receiptId}`;
 
     const response = await fetch(url, {
       method: "GET",
       headers: {
-        Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
       },
       credentials: "include",

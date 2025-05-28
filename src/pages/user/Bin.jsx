@@ -26,7 +26,6 @@ export default function BinPage() {
           {
             method: "GET",
             headers: {
-              Authorization: token,
               "Content-Type": "application/json",
             },
             credentials: "include",
@@ -93,7 +92,6 @@ export default function BinPage() {
           {
             method: "PATCH",
             headers: {
-              Authorization: token,
               "Content-Type": "application/json",
             },
             credentials: "include",
@@ -146,7 +144,6 @@ export default function BinPage() {
           {
             method: "DELETE",
             headers: {
-              Authorization: token,
               "Content-Type": "application/json",
             },
             credentials: "include",

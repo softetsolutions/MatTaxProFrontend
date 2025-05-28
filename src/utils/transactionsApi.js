@@ -3,7 +3,7 @@ import { handleUnauthoriz } from "./helperFunction";
 
 export const fetchTransactions = async (selectedUserId = null, navigate) => {
   try {
-    const { token, userId, role } = getAuthInfo();
+    const { userId, role } = getAuthInfo();
 
     let url;
     if (role === "accountant") {
@@ -18,7 +18,6 @@ export const fetchTransactions = async (selectedUserId = null, navigate) => {
     const response = await fetch(url, {
       method: "GET",
       headers: {
-        Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
       },
       credentials: "include",
@@ -46,7 +45,7 @@ export const fetchTransactions = async (selectedUserId = null, navigate) => {
 
 export const createTransaction = async (transactionData, selectedUserId) => {
   try {
-    const { token, userId, role } = getAuthInfo();
+    const { userId, role } = getAuthInfo();
 
     let url;
     if (role === "accountant") {
@@ -62,7 +61,6 @@ export const createTransaction = async (transactionData, selectedUserId) => {
       method: "POST",
       credentials: "include",
       headers: {
-        Authorization: `Bearer ${token}`,
         ...(transactionData instanceof FormData
           ? {}
           : { "Content-Type": "application/json" }),
@@ -94,7 +92,7 @@ export const updateTransaction = async (
   selectedUserId = null
 ) => {
   try {
-    const { token, userId, role } = getAuthInfo();
+    const { userId, role } = getAuthInfo();
 
     let url;
     if (role === "accountant") {
@@ -110,7 +108,6 @@ export const updateTransaction = async (
       method: "POST",
       credentials: "include",
       headers: {
-        Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
@@ -141,7 +138,7 @@ export const deleteTransaction = async (
   selectedUserId = null
 ) => {
   try {
-    const { token, userId, role } = getAuthInfo();
+    const { userId, role } = getAuthInfo();
 
     let url;
     if (role === "accountant") {
@@ -157,7 +154,6 @@ export const deleteTransaction = async (
       method: "DELETE",
       credentials: "include",
       headers: {
-        Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
       },
     });

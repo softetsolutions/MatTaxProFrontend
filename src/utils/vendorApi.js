@@ -8,7 +8,6 @@ export const fetchAllVendors = async (userId) => {
     const response = await fetch(url, {
       method: "GET",
       headers: {
-        // Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
       },
       credentials: "include",
