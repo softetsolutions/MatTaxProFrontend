@@ -1,14 +1,17 @@
 import { useState, useEffect } from "react";
 import { ArrowUpDown, Check, X, Info } from "lucide-react";
 import { toast } from "react-toastify";
+import { useOutletContext } from "react-router-dom";
 import {
   fetchInvitations,
   handleApproveInvitation,
   handleRejectInvitation,
+  fetchAndUpdatePendingInvitationsCount,
 } from "../../utils/invitationHelper";
 import ConfirmationModal from "../../components/ConfirmationModal";
 
 export default function InvitationPage() {
+  const { setPendingInvitationsCount } = useOutletContext();
   const [invitations, setInvitations] = useState([]);
   const [sortField, setSortField] = useState("id");
   const [sortDirection, setSortDirection] = useState("asc");
@@ -75,6 +78,7 @@ export default function InvitationPage() {
               : invitation
           )
         );
+        setPendingInvitationsCount((prev) => Math.max(0, prev - 1));
         toast.success("Invitation approved successfully");
       } else {
         await handleRejectInvitation(confirmationInvitationId, invitations);
@@ -85,8 +89,11 @@ export default function InvitationPage() {
               : invitation
           )
         );
+        setPendingInvitationsCount((prev) => Math.max(0, prev - 1));
         toast.success("Invitation rejected successfully");
       }
+
+      fetchAndUpdatePendingInvitationsCount(setPendingInvitationsCount);
 
       if (
         selectedInvitation &&
@@ -407,6 +414,34 @@ export default function InvitationPage() {
         onClose={() => setShowConfirmationModal(false)}
         onConfirm={handleConfirmAction}
         action={confirmationAction}
+        title={
+          confirmationAction === "approve"
+            ? "Approve Invitation"
+            : confirmationAction === "reject"
+            ? "Reject Invitation"
+            : "Confirm Action"
+        }
+        message={
+          confirmationAction === "approve"
+            ? "Are you sure you want to approve this invitation?"
+            : confirmationAction === "reject"
+            ? "Are you sure you want to reject this invitation?"
+            : "Are you sure you want to proceed?"
+        }
+        confirmText={
+          confirmationAction === "approve"
+            ? "Approve"
+            : confirmationAction === "reject"
+            ? "Reject"
+            : "Confirm"
+        }
+        confirmButtonClass={
+          confirmationAction === "approve"
+            ? "bg-green-600 hover:bg-green-700 focus:ring-green-300"
+            : confirmationAction === "reject"
+            ? "bg-red-600 hover:bg-red-700 focus:ring-red-300"
+            : undefined
+        }
       />
     </div>
   );

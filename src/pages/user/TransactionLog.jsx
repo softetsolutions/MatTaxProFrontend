@@ -56,7 +56,6 @@ export default function TransactionLog({
           {
             method: "GET",
             headers: {
-              // Authorization: token,
               "Content-Type": "application/json",
             },
             credentials: "include",

@@ -1,9 +1,9 @@
 import { handleUnauthoriz } from "./helperFunction";
 import { getAuthInfo } from "./auth";
 
-export const fetchAllVendors = async (userId) => {
+export const fetchAllAccounts = async (userId) => {
   try {
-    const url = `${import.meta.env.VITE_BASE_URL}/vendor/gets?userId=${userId}`;
+    const url = `${import.meta.env.VITE_BASE_URL}/accountNo/gets?userId=${userId}`;
 
     const response = await fetch(url, {
       method: "GET",
@@ -18,57 +18,21 @@ export const fetchAllVendors = async (userId) => {
         handleUnauthoriz();
         throw new Error("Unauthorized: Please check your authentication");
       }
-      throw new Error("Failed to fetch vendors");
+      throw new Error("Failed to fetch accounts");
     }
 
     const data = await response.json();
     return data;
   } catch (err) {
-    console.error("Error fetching vendors:", err);
+    console.error("Error fetching accounts:", err);
     throw err;
   }
 };
 
-export const updateVendor = async (vendorId, name) => {
-  try {
-    const { userId } = getAuthInfo();
-
-    const response = await fetch(
-      `${import.meta.env.VITE_BASE_URL}/vendor/update/${vendorId}`,
-      {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-        body: JSON.stringify({
-          userId,
-          name,
-        }),
-      }
-    );
-
-    if (!response.ok) {
-      if (response.status === 401) {
-        handleUnauthoriz();
-        throw new Error("Unauthorized: Please check your authentication");
-      }
-      const errorData = await response.json();
-      throw new Error(errorData.message || "Failed to update vendor");
-    }
-
-    const data = await response.json();
-    return data;
-  } catch (err) {
-    console.error("Error updating vendor:", err);
-    throw err;
-  }
-};
-
-export const createVendor = async (name, userId) => {
+export const createAccount = async (accountData, userId) => {
   try {
     const response = await fetch(
-      `${import.meta.env.VITE_BASE_URL}/vendor/create`,
+      `${import.meta.env.VITE_BASE_URL}/accountNo/create`,
       {
         method: "POST",
         headers: {
@@ -77,7 +41,7 @@ export const createVendor = async (name, userId) => {
         credentials: "include",
         body: JSON.stringify({
           userId,
-          name,
+          accountNo: accountData
         }),
       }
     );
@@ -88,13 +52,49 @@ export const createVendor = async (name, userId) => {
         throw new Error("Unauthorized: Please check your authentication");
       }
       const errorData = await response.json();
-      throw new Error(errorData.message || "Failed to create vendor");
+      throw new Error(errorData.message || "Failed to create account");
     }
 
     const data = await response.json();
     return data;
   } catch (err) {
-    console.error("Error creating vendor:", err);
+    console.error("Error creating account:", err);
     throw err;
   }
 };
+
+export const updateAccount = async (accountId, number) => {
+  try {
+    const { userId } = getAuthInfo();
+
+    const response = await fetch(
+      `${import.meta.env.VITE_BASE_URL}/accountNo/update/${accountId}`,
+      {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          userId,
+          name: number,
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        handleUnauthoriz();
+        throw new Error("Unauthorized: Please check your authentication");
+      }
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Failed to update account");
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (err) {
+    console.error("Error updating account:", err);
+    throw err;
+  }
+}; 

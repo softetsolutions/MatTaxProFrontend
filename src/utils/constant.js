@@ -1,14 +1,15 @@
-import { History, User, Trash2, Mail, UserRoundPlus } from "lucide-react";
+import { History, User, Trash2, Mail, UserRoundPlus, Proportions } from "lucide-react";
 
 export const routeMapping = {
   transactions: "Transactions",
-  addaccountant: "Add Accountant",
+  addaccountant: "Authorise Accountant",
   users: "Users",
   bin: "Bin",
   invitations: "Invitations",
-  accounts: "Accounts",
+  accounts: "Profile",
   allUsers: "All Users",
-  allAccountants: "All Accountants"
+  allAccountants: "All Accountants",
+  report: "Report"
 };
 
 export const iconMapping = (route) => {
@@ -17,5 +18,6 @@ export const iconMapping = (route) => {
   else if (route === "users" || route === "accounts" || route === "allUsers" || route === "allAccountants") return User;
   else if (route === "invitations") return Mail;
   else if (route === "bin") return Trash2;
-  else return null;
+  else if (route === "report") return Proportions;
+  else return null; 
 };

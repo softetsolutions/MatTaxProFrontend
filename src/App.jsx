@@ -16,6 +16,12 @@ import AllUsers from "./pages/admin/AllUsers";
 import AllAccountants from "./pages/admin/AllAccountants";
 import RenderAllUserOrTransactions from "./pages/user/RenderAllUsersOrTransactions";
 import VerifyByGoogle from "./pages/VerifyByGoogle";
+import ForgotPassword from "./pages/ForgotPassword";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import TermsAndConditions from "./pages/TermsAndConditions";
+import ResetPassword from "./pages/ResetPassword";
+import Reports from "./pages/user/Reports";
+import ConfirmDeleteAccount from "./pages/user/ConfirmDeleteAccount";
 
 
 function App() {
@@ -29,6 +35,11 @@ function App() {
         <Route path="/register/:role" element={<UserSignup />} />
         <Route path="/verifyEmail/:token" element={<VerifyEmail />} />
         <Route path="/verifyByGoogle/" element={<VerifyByGoogle />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/resetPassword/:token" element={<ResetPassword />} />
+        <Route path="/confirmDeleteAccount" element={<ConfirmDeleteAccount/>}/>
+        <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+        <Route path="/terms-conditions" element={<TermsAndConditions />} />
         {/* user */}
         <Route
           path="/dashboard"
@@ -108,6 +119,15 @@ function App() {
             element={
               <ProtectRouteComp routeName={"allAccountants"}>
                 <AllAccountants />
+              </ProtectRouteComp>
+            }
+          />
+          {/*  */}
+          <Route
+            path="report"
+            element={
+              <ProtectRouteComp routeName={"report"}>
+                <Reports />
               </ProtectRouteComp>
             }
           />

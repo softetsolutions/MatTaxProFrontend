@@ -1,7 +1,7 @@
 import { getAuthInfo } from "./auth";
 
 export const fetchInvitations = async () => {
-  const { token, userId: accountId } = getAuthInfo();
+  const { userId: accountId } = getAuthInfo();
   const response = await fetch(
     `${
       import.meta.env.VITE_BASE_URL
@@ -9,7 +9,6 @@ export const fetchInvitations = async () => {
     {
       method: "GET",
       headers: {
-        Authorization: token,
         "Content-Type": "application/json",
       },
       credentials: "include",
@@ -32,7 +31,7 @@ export const fetchInvitations = async () => {
 };
 
 export const handleApproveInvitation = async (invitationId, invitations) => {
-  const { token, userId: accountId } = getAuthInfo();
+  const { userId: accountId } = getAuthInfo();
 
   // Get the UserId
   const invitation = invitations.find((inv) => inv.id === invitationId);
@@ -45,7 +44,6 @@ export const handleApproveInvitation = async (invitationId, invitations) => {
     {
       method: "PUT",
       headers: {
-        Authorization: token,
         "Content-Type": "application/json",
       },
       credentials: "include",
@@ -66,7 +64,7 @@ export const handleApproveInvitation = async (invitationId, invitations) => {
 };
 
 export const handleRejectInvitation = async (invitationId, invitations) => {
-  const { token, userId: accountId } = getAuthInfo();
+  const { userId: accountId } = getAuthInfo();
   // etting the userId
   const invitation = invitations.find((inv) => inv.id === invitationId);
   if (!invitation) {
@@ -78,7 +76,6 @@ export const handleRejectInvitation = async (invitationId, invitations) => {
     {
       method: "PUT",
       headers: {
-        Authorization: token,
         "Content-Type": "application/json",
       },
       credentials: "include",

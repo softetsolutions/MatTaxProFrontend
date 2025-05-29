@@ -9,6 +9,7 @@ import {
   removeAuthorization,
   fetchAuthorizationStatus,
   fetchAccountants,
+  searchAccountantByEmail,
 } from "../../utils/authorizedUsers";
 import { searchAccountants } from "../../utils/searchUtils";
 
@@ -24,8 +25,12 @@ export default function AccountantPage() {
   const [accountantToDeauthorize, setAccountantToDeauthorize] = useState(null);
   const [accountantToAuthorize, setAccountantToAuthorize] = useState(null);
   const [isAuthorizeModal, setIsAuthorizeModal] = useState(false);
+  const [searchType,] = useState("name");
   const [searchTerm, setSearchTerm] = useState("");
   const [filteredAccountants, setFilteredAccountants] = useState([]);
+  const [emailSearchLoading, setEmailSearchLoading] = useState(false);
+  const [searchedAccountant,] = useState(null);
+  const [emailSearchedAccountant, setEmailSearchedAccountant] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -50,7 +55,6 @@ export default function AccountantPage() {
               : "unauthorized",
           createdAt: new Date(accountant.created_at).toLocaleDateString(),
         }));
-
         setAccountants(transformedData);
         setLoading(false);
       } catch (err) {
@@ -69,9 +73,10 @@ export default function AccountantPage() {
   }, [navigate]);
 
   useEffect(() => {
-    const results = searchAccountants(accountants, searchTerm);
-    setFilteredAccountants(results);
-  }, [searchTerm, accountants]);
+    if (searchType === "name") {
+      setFilteredAccountants(searchAccountants(accountants, searchTerm));
+    }
+  }, [searchTerm, accountants, searchType]);
 
   const handleSort = (field) => {
     if (sortField === field) {
@@ -175,6 +180,41 @@ export default function AccountantPage() {
 
     return () => clearInterval(interval);
   }, []);
+
+  const handleUnifiedSearch = async (e) => {
+    if (e) e.preventDefault();
+    if (!searchTerm.trim()) {
+      toast.warning("Please enter an email address");
+      return;
+    }
+    setEmailSearchLoading(true);
+    try {
+      const accountant = await searchAccountantByEmail(searchTerm);
+      if (accountant) {
+        // Check if accountant already exists in the list
+        const existing = accountants.find(a => a.id === accountant.id);
+        const accountantData = {
+          id: accountant.id,
+          accountantId: `ACC${String(accountant.id).padStart(3, "0")}`,
+          name: `${accountant.fname} ${accountant.lname}`,
+          email: accountant.email,
+          address: accountant.address_line1 || "N/A",
+          status: existing ? existing.status : "unauthorized",
+        };
+        setEmailSearchedAccountant(accountantData);
+        // Do NOT open the modal automatically
+      } else {
+        toast.info("No accountant found with this email");
+        setEmailSearchedAccountant(null);
+      }
+    } catch (err) {
+      console.error("Search failed:", err);
+      toast.error(err.message || "Failed to search accountant");
+      setEmailSearchedAccountant(null);
+    } finally {
+      setEmailSearchLoading(false);
+    }
+  };
 
   const renderActionButton = (accountant) => {
     const isPending = accountant.status === "pending";
@@ -283,19 +323,65 @@ export default function AccountantPage() {
             View and manage accountant access
           </p>
         </div>
-        <div className="relative">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <Search className="h-5 w-5 text-gray-400" />
+        <form onSubmit={handleUnifiedSearch} className="flex gap-2 items-center">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5 pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Search by name or address..."
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+              className="pl-10 text-black px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
           </div>
-          <input
-            type="text"
-            placeholder="Search by name or address..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="text-black pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
-        </div>
+          <button
+            type="submit"
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            disabled={emailSearchLoading}
+          >
+            {emailSearchLoading ? "Searching..." : "Search"}
+          </button>
+        </form>
       </div>
+
+      {emailSearchedAccountant && (
+        <button
+          onClick={async () => {
+            setEmailSearchedAccountant(null);
+            setSearchTerm("");
+            setLoading(true);
+            try {
+              const data = await fetchAccountants();
+              const transformedData = data.map((accountant) => ({
+                id: accountant.id,
+                accountantId: `ACC${String(accountant.id).padStart(3, "0")}`,
+                name: `${accountant.fname} ${accountant.lname}`,
+                email: accountant.email,
+                address: accountant.address || "N/A",
+                status:
+                  accountant.is_authorized === "approved"
+                    ? "authorized"
+                    : accountant.is_authorized === "pending"
+                    ? "pending"
+                    : accountant.is_authorized === "rejected"
+                    ? "rejected"
+                    : "unauthorized",
+                createdAt: new Date(accountant.created_at).toLocaleDateString(),
+              }));
+              setAccountants(transformedData);
+            } catch (err) {
+              console.error(err);
+            }
+            setLoading(false);
+          }}
+          className="ml-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 flex items-center gap-2"
+        >
+          <span>Clear Search</span>
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      )}
 
       <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
         <div className="overflow-x-auto">
@@ -326,52 +412,71 @@ export default function AccountantPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {filteredAccountants.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={6}
-                    className="px-4 py-6 text-center text-gray-500"
-                  >
-                    {searchTerm
-                      ? "No matching accountants found"
-                      : "No accountants found"}
+              {emailSearchedAccountant ? (
+                <tr key={emailSearchedAccountant.id}>
+                  <td className="px-4 py-3 text-sm text-gray-900">{emailSearchedAccountant.accountantId}</td>
+                  <td className="px-4 py-3 text-sm text-gray-900">{emailSearchedAccountant.name}</td>
+                  <td className="px-4 py-3 text-sm text-gray-900">{emailSearchedAccountant.email}</td>
+                  <td className="px-4 py-3 text-sm text-gray-900">{emailSearchedAccountant.address}</td>
+                  <td className="px-4 py-3 text-sm">{getStatusBadge(emailSearchedAccountant.status)}</td>
+                  <td className="px-4 py-3 text-sm">
+                    <div className="flex gap-2">
+                      {renderActionButton(emailSearchedAccountant)}
+                      <button
+                        onClick={() => handleAbout(emailSearchedAccountant)}
+                        className="p-1 text-blue-600 hover:text-blue-800 rounded hover:bg-blue-50"
+                        title="About"
+                      >
+                        <Info className="w-4 h-4 hover:cursor-pointer" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ) : (
-                filteredAccountants.map((accountant) => (
-                  <tr
-                    key={accountant.id}
-                    className="hover:bg-gray-50 transition-colors"
-                  >
-                    <td className="px-4 py-3 text-sm text-gray-900">
-                      {accountant.accountantId}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-900">
-                      {accountant.name}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-900">
-                      {accountant.email}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-900">
-                      {accountant.address}
-                    </td>
-                    <td className="px-4 py-3 text-sm">
-                      {getStatusBadge(accountant.status)}
-                    </td>
-                    <td className="px-4 py-3 text-sm">
-                      <div className="flex gap-2">
-                        {renderActionButton(accountant)}
-                        <button
-                          onClick={() => handleAbout(accountant)}
-                          className="p-1 text-blue-600 hover:text-blue-800 rounded hover:bg-blue-50"
-                          title="About"
-                        >
-                          <Info className="w-4 h-4 hover:cursor-pointer" />
-                        </button>
-                      </div>
+                filteredAccountants.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="px-4 py-6 text-center text-gray-500">
+                      {searchTerm
+                        ? "No matching accountants found"
+                        : "No accountants found"}
                     </td>
                   </tr>
-                ))
+                ) : (
+                  filteredAccountants.map((accountant) => (
+                    <tr
+                      key={accountant.id}
+                      className="hover:bg-gray-50 transition-colors"
+                    >
+                      <td className="px-4 py-3 text-sm text-gray-900">
+                        {accountant.accountantId}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-900">
+                        {accountant.name}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-900">
+                        {accountant.email}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-900">
+                        {accountant.address}
+                      </td>
+                      <td className="px-4 py-3 text-sm">
+                        {getStatusBadge(accountant.status)}
+                      </td>
+                      <td className="px-4 py-3 text-sm">
+                        <div className="flex gap-2">
+                          {renderActionButton(accountant)}
+                          <button
+                            onClick={() => handleAbout(accountant)}
+                            className="p-1 text-blue-600 hover:text-blue-800 rounded hover:bg-blue-50"
+                            title="About"
+                          >
+                            <Info className="w-4 h-4 hover:cursor-pointer" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )
               )}
             </tbody>
           </table>
@@ -455,7 +560,7 @@ export default function AccountantPage() {
               </button>
               {selectedAccountant.status !== "pending" && (
                 <button
-                  onClick={() => handleAuthorize(selectedAccountant)}
+                  onClick={searchedAccountant ? handleUnifiedSearch : () => handleAuthorize(selectedAccountant)}
                   className={`px-4 py-2 text-white rounded ${
                     selectedAccountant.status === "authorized"
                       ? "bg-red-600 hover:bg-red-700"

@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
-import { ArrowUpDown } from "lucide-react";
+import { ArrowUpDown, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { fetchAuthorizedUsers } from "../../utils/authorizedUsers";
+import RenderTransactionOrTransactionLog from "./RenderTransactionOrTransactionLog";
 
 export default function Users() {
   const navigate = useNavigate();
@@ -10,6 +11,7 @@ export default function Users() {
   const [sortDirection, setSortDirection] = useState("asc");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [selectedUserId, setSelectedUserId] = useState(null);
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -17,7 +19,14 @@ export default function Users() {
         setLoading(true);
         setError(null);
         const data = await fetchAuthorizedUsers();
-        setUsers(data);
+        const transformed = data.map(u => ({
+          id: u.userid ?? u.id ?? u.userId ?? u._id,
+          fname: u.fname ?? u.firstName ?? u.fname ?? "",
+          lname: u.lname ?? u.lastName ?? u.lname ?? "",
+          email: u.email || "",
+          phone: u.phone || ""
+        }));
+        setUsers(transformed);
       } catch (err) {
         setError(err.message || "Failed to fetch users");
         console.error("API Error:", err);
@@ -55,6 +64,21 @@ export default function Users() {
     }
     return 0;
   });
+
+  if (selectedUserId) {
+    return (
+      <div className="space-y-6">
+        <button
+          onClick={() => setSelectedUserId(null)}
+          className="inline-flex items-center px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium rounded-md mb-4"
+        >
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Back to Users
+        </button>
+        <RenderTransactionOrTransactionLog selectedUserId={selectedUserId} />
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -141,7 +165,8 @@ export default function Users() {
                   sortedUsers.map((user) => (
                     <tr
                       key={user.id}
-                      className="hover:bg-gray-50 transition-colors"
+                      className="hover:bg-gray-50 transition-colors cursor-pointer"
+                      onClick={() => setSelectedUserId(user.id)}
                     >
                       <td className="px-4 py-3 text-sm text-gray-900">
                         {user.fname}

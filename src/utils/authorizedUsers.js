@@ -2,7 +2,7 @@ import { getAuthInfo } from "./auth";
 
 export const fetchAuthorizedUsers = async () => {
   try {
-    const { token, userId: accountId } = getAuthInfo();
+    const {  userId: accountId } = getAuthInfo();
 
     const response = await fetch(
       `${
@@ -11,7 +11,6 @@ export const fetchAuthorizedUsers = async () => {
       {
         method: "GET",
         headers: {
-          Authorization: token,
           "Content-Type": "application/json",
         },
         credentials: "include",
@@ -35,14 +34,13 @@ export const fetchAuthorizedUsers = async () => {
 
 export const requestAuthorization = async (accountantId) => {
   try {
-    const { token, userId } = getAuthInfo();
+    const { userId } = getAuthInfo();
 
     const response = await fetch(
       `${import.meta.env.VITE_BASE_URL}/accountant/auth`,
       {
         method: "POST",
         headers: {
-          Authorization: token,
           "Content-Type": "application/json",
         },
         credentials: "include",
@@ -68,14 +66,13 @@ export const requestAuthorization = async (accountantId) => {
 
 export const removeAuthorization = async (accountantId) => {
   try {
-    const { token, userId } = getAuthInfo();
+    const { userId } = getAuthInfo();
 
     const response = await fetch(
       `${import.meta.env.VITE_BASE_URL}/accountant/remove-auth`,
       {
         method: "DELETE",
         headers: {
-          Authorization: token,
           "Content-Type": "application/json",
         },
         credentials: "include",
@@ -100,14 +97,13 @@ export const removeAuthorization = async (accountantId) => {
 
 export const fetchAuthorizationStatus = async () => {
   try {
-    const { token, userId } = getAuthInfo();
+    const { userId } = getAuthInfo();
 
     const response = await fetch(
       `${import.meta.env.VITE_BASE_URL}/user/accountants/${userId}`,
       {
         method: "GET",
         headers: {
-          Authorization: token,
           "Content-Type": "application/json",
         },
         credentials: "include",
@@ -128,14 +124,13 @@ export const fetchAuthorizationStatus = async () => {
 
 export const fetchAccountants = async () => {
   try {
-    const { token, userId } = getAuthInfo();
+    const { userId } = getAuthInfo();
 
     const response = await fetch(
       `${import.meta.env.VITE_BASE_URL}/user/accountants/${userId}`,
       {
         method: "GET",
         headers: {
-          Authorization: token,
           "Content-Type": "application/json",
         },
         credentials: "include",
@@ -154,5 +149,33 @@ export const fetchAccountants = async () => {
   } catch (err) {
     console.error("Error fetching accountants:", err);
     throw err;
+  }
+};
+
+export const searchAccountantByEmail = async (email) => {
+  try {
+
+    const response = await fetch(
+      `${import.meta.env.VITE_BASE_URL}/user/accountant-by-email/${email}`,
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+      }
+    );
+
+    if (!response.ok) {
+      if (response.status === 403) {
+        return null; // Accountant not found
+      }
+      throw new Error("Failed to search accountant");
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Error searching accountant:", error);
+    throw error;
   }
 };

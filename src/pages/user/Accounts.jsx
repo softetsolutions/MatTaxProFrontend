@@ -1,7 +1,10 @@
 import { useState, useEffect } from "react";
 import { toast } from "react-toastify";
-import { fetchUserDetails, updateUserDetails } from "../../utils/user";
-import { User, Mail, Phone, MapPin, Edit2, X, Check } from "lucide-react";
+import { fetchUserDetails, updateUserDetails, sendDeleteEmail } from "../../utils/user";
+import { User, Mail, Phone, MapPin, Edit2, X, Check, Trash2 } from "lucide-react";
+import PhoneInput from "react-phone-input-2";
+import "react-phone-input-2/lib/style.css";
+import ConfirmationModal from "../../components/ConfirmationModal";
 
 export default function AccountPage() {
   const [userData, setUserData] = useState({
@@ -9,12 +12,16 @@ export default function AccountPage() {
     lastName: "",
     email: "",
     phone: "",
-    address: "",
+    addressLine1: "",
+    city: "",
+    postcode: "",
+    country: "",
   });
 
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({ ...userData });
   const [isLoading, setIsLoading] = useState(true);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   useEffect(() => {
     const loadUserData = async () => {
@@ -38,6 +45,10 @@ export default function AccountPage() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  const handlePhoneChange = (value) => {
+    setFormData((prev) => ({ ...prev, phone: value }));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
@@ -56,6 +67,17 @@ export default function AccountPage() {
   const handleCancel = () => {
     setFormData({ ...userData });
     setIsEditing(false);
+  };
+
+  const handleDeleteAccount = async () => {
+    try {
+      await sendDeleteEmail();
+      toast.success("Account deletion request sent. Please check your email for confirmation.");
+      setShowDeleteModal(false);
+    } catch (error) {
+      console.error("Delete account error:", error);
+      toast.error(error.message || "Failed to send deletion email. Please try again.");
+    }
   };
 
   // Get user initials for avatar
@@ -90,10 +112,28 @@ export default function AccountPage() {
     },
     { id: "phone", label: "Phone Number", type: "tel", icon: Phone },
     {
-      id: "address",
-      label: "Address",
+      id: "addressLine1",
+      label: "Address Line 1",
       type: "text",
       fullWidth: true,
+      icon: MapPin,
+    },
+    {
+      id: "city",
+      label: "City",
+      type: "text",
+      icon: MapPin,
+    },
+    {
+      id: "postcode",
+      label: "Postcode",
+      type: "text",
+      icon: MapPin,
+    },
+    {
+      id: "country",
+      label: "Country",
+      type: "text",
       icon: MapPin,
     },
   ];
@@ -133,9 +173,16 @@ export default function AccountPage() {
                 <Mail size={16} />
                 {userData.email}
               </p>
-              <p className="text-blue-100 flex items-center justify-center sm:justify-start gap-2 mt-1">
+              <p className="flex items-center justify-center sm:justify-start gap-2 mt-1">
                 <Phone size={16} />
                 {userData.phone || "No phone number"}
+              </p>
+              <p className="text-blue-100 flex items-center justify-center sm:justify-start gap-2 mt-1">
+                <MapPin size={16} />
+                {userData.addressLine1 || "No address"}
+                {userData.city && `, ${userData.city}`}
+                {userData.postcode && `, ${userData.postcode}`}
+                {userData.country && `, ${userData.country}`}
               </p>
               <div className="mt-4 flex flex-wrap gap-3 justify-center sm:justify-start"></div>
             </div>
@@ -187,21 +234,59 @@ export default function AccountPage() {
                           </div>
                         </label>
                         <div className="relative">
-                          <input
-                            type={field.type}
-                            id={field.id}
-                            name={field.id}
-                            value={formData[field.id] || ""}
-                            onChange={handleChange}
-                            className={`w-full p-3 pl-4 bg-white border ${
-                              field.disabled
-                                ? "bg-gray-50 text-gray-500 cursor-not-allowed"
-                                : "hover:border-blue-300"
-                            } border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 transition-all duration-200`}
-                            required={field.required}
-                            disabled={field.disabled}
-                            placeholder={`Enter your ${field.label.toLowerCase()}`}
-                          />
+                          {field.id === "phone" ? (
+                            <PhoneInput
+                              country={"gb"}
+                              value={formData.phone}
+                              onChange={handlePhoneChange}
+                              inputProps={{
+                                name: "phone",
+                                required: true,
+                                autoFocus: false,
+                              }}
+                              inputStyle={{
+                                width: "100%",
+                                height: "48px",
+                                borderRadius: "0.5rem",
+                                border: "1px solid #e5e7eb",
+                                paddingLeft: "48px",
+                                fontSize: "1rem",
+                                color: "#000000",
+                                backgroundColor: "#fff",
+
+                              }}
+                              dropdownStyle={{
+                                color: "#000000",
+                                backgroundColor: "#ffffff"
+                              }}
+                              buttonStyle={{
+                                border: "none",
+                                background: "none",
+                                left: "12px",
+                                top: "12px",
+                                paddingBottom: "10px",
+                              }}
+                              containerStyle={{
+                                width: "100%",
+                              }}
+                            />
+                          ) : (
+                            <input
+                              type={field.type}
+                              id={field.id}
+                              name={field.id}
+                              value={formData[field.id] || ""}
+                              onChange={handleChange}
+                              className={`w-full p-3 pl-4 bg-white border ${
+                                field.disabled
+                                  ? "bg-gray-50 text-gray-500 cursor-not-allowed"
+                                  : "hover:border-blue-300"
+                              } border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 transition-all duration-200`}
+                              required={field.required}
+                              disabled={field.disabled}
+                              placeholder={`Enter your ${field.label.toLowerCase()}`}
+                            />
+                          )}
                         </div>
                         {field.disabled && (
                           <p className="mt-1 text-xs text-gray-500 flex items-center gap-1">
@@ -285,16 +370,50 @@ export default function AccountPage() {
 
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-100">
-                    Address
+                    Address Information
                   </h3>
-                  <div className="bg-gray-50 rounded-lg p-4 transition-all hover:bg-gray-100">
-                    <div className="flex items-center gap-2 text-sm font-medium text-gray-500 mb-1">
-                      <MapPin size={16} className="text-blue-600" />
-                      Address
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {[
+                      { id: "addressLine1", label: "Address Line 1" },
+                      { id: "city", label: "City" },
+                      { id: "postcode", label: "Postcode" },
+                      { id: "country", label: "Country" },
+                    ].map((field) => (
+                      <div
+                        key={field.id}
+                        className="bg-gray-50 rounded-lg p-4 transition-all hover:bg-gray-100"
+                      >
+                        <div className="flex items-center gap-2 text-sm font-medium text-gray-500 mb-1">
+                          <MapPin size={16} className="text-blue-600" />
+                          {field.label}
+                        </div>
+                        <p className="text-gray-900">
+                          {userData[field.id] || <span className="italic text-gray-400">Not provided</span>}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Delete Account Section */}
+                <div className="pt-8 border-t border-gray-100">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Danger Zone</h3>
+                  <div className="bg-red-50 rounded-lg p-4">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <h4 className="text-red-800 font-medium">Delete Account</h4>
+                        <p className="text-red-600 text-sm mt-1">
+                          Once you delete your account, there is no going back. Please be certain.
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => setShowDeleteModal(true)}
+                        className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all duration-200 shadow-sm"
+                      >
+                        <Trash2 size={16} />
+                        Delete Account
+                      </button>
                     </div>
-                    <p className="text-lg font-medium text-gray-900">
-                      {userData.address || "No address provided"}
-                    </p>
                   </div>
                 </div>
               </div>
@@ -302,6 +421,16 @@ export default function AccountPage() {
           </div>
         </div>
       </div>
+      <ConfirmationModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={handleDeleteAccount}
+        action="delete"
+        title="Delete Account"
+        message="Are you sure you want to delete your account? This action cannot be undone. A confirmation email will be sent to your registered email address."
+        confirmText="Yes, Delete Account"
+        confirmButtonClass="bg-red-600 hover:bg-red-700 focus:ring-red-300"
+      />
     </div>
   );
 }

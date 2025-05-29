@@ -1,10 +1,9 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { toast } from "react-toastify";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import ReCAPTCHA from "react-google-recaptcha";
 import { Eye, EyeOff, ArrowLeft } from "lucide-react";
 import Header from "../components/Header";
-import PhoneInput from "react-phone-input-2";
-import "react-phone-input-2/lib/style.css";
 
 export default function UserSignupPage() {
   const navigate = useNavigate();
@@ -14,13 +13,13 @@ export default function UserSignupPage() {
     email: "",
     password: "",
     confirmPassword: "",
-    phone: "",
-    address: "",
   });
+  const recaptchaRef = useRef();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
+  const [recaptchaToken, setRecaptchaToken] = useState(null);
   const { role } = useParams();
 
   const handleChange = (e) => {
@@ -39,55 +38,47 @@ export default function UserSignupPage() {
     }
   };
 
-  const handlePhoneChange = (value) => {
-    setFormData((prev) => ({
-      ...prev,
-      phone: value,
-    }));
-
-    if (errors.phone) {
-      setErrors((prev) => {
-        const newErrors = { ...prev };
-        delete newErrors.phone;
-        return newErrors;
-      });
-    }
+  const handleRecaptchaChange = (token) => {
+    setRecaptchaToken(token);
   };
 
   // validation
-  const validateForm = () => {
-    const newErrors = {};
-    if (!formData.firstName.trim()) {
-      newErrors.firstName = "First name is required";
-    }
-    if (!formData.lastName.trim()) {
-      newErrors.lastName = "Last name is required";
-    }
+  // const validateForm = () => {
+  //   const newErrors = {};
+  //   if (!formData.firstName.trim()) {
+  //     newErrors.firstName = "First name is required";
+  //   }
+  //   if (!formData.lastName.trim()) {
+  //     newErrors.lastName = "Last name is required";
+  //   }
 
-    if (!formData.email.trim()) {
-      newErrors.email = "Email is required";
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = "Email is invalid";
-    }
+  //   if (!formData.email.trim()) {
+  //     newErrors.email = "Email is required";
+  //   } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+  //     newErrors.email = "Email is invalid";
+  //   }
 
-    if (!formData.password) {
-      newErrors.password = "Password is required";
-    } else if (formData.password.length < 8) {
-      newErrors.password = "Password must be at least 8 characters";
-    }
+  //   if (!formData.password) {
+  //     newErrors.password = "Password is required";
+  //   } else if (formData.password.length < 8) {
+  //     newErrors.password = "Password must be at least 8 characters";
+  //   }
 
-    if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = "Passwords do not match";
-    }
+  //   if (formData.password !== formData.confirmPassword) {
+  //     newErrors.confirmPassword = "Passwords do not match";
+  //   }
 
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
+  //   setErrors(newErrors);
+  //   return Object.keys(newErrors).length === 0;
+  // };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-
+    if (!recaptchaToken) {
+      setErrors("Please complete the reCAPTCHA verification.");
+      return;
+    }
     // if (!validateForm()) return;
 
     setIsLoading(true);
@@ -104,9 +95,7 @@ export default function UserSignupPage() {
             fname: formData.firstName,
             lname: formData.lastName,
             email: formData.email,
-            phone: formData.phone,
             password: formData.password,
-            address: formData.address,
             role: role,
           }),
         }
@@ -118,7 +107,12 @@ export default function UserSignupPage() {
       toast.success("Wohha signed up successfully!, PLs Login");
       navigate("/login");
     } catch {
+      console.error("Error message:", e.message);
       setErrors({ form: "An error occurred. Please try again." });
+      if (recaptchaRef.current) {
+        recaptchaRef.current.reset();
+      }
+      setRecaptchaToken(null);
     } finally {
       setIsLoading(false);
     }
@@ -203,30 +197,6 @@ export default function UserSignupPage() {
                     </p>
                   )}
                 </div>
-                {/* Address */}
-                <div>
-                  <label
-                    htmlFor="address"
-                    className="block text-sm font-medium mb-1.5 text-gray-300"
-                  >
-                    Address
-                  </label>
-                  <input
-                    type="text"
-                    id="address"
-                    name="address"
-                    value={formData.address}
-                    onChange={handleChange}
-                    className="w-full p-3 bg-zinc-800 border border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400"
-                    placeholder="Enter your address"
-                    required
-                  />
-                  {errors.address && (
-                    <p className="mt-1 text-xs text-red-400">
-                      {errors.address}
-                    </p>
-                  )}
-                </div>
                 {/* Email */}
                 <div>
                   <label
@@ -248,37 +218,6 @@ export default function UserSignupPage() {
                     <p className="mt-1 text-xs text-red-400">{errors.email}</p>
                   )}
                 </div>
-
-                {/* Phone Number */}
-                <div>
-                  <label
-                    htmlFor="phone"
-                    className="block text-sm font-medium mb-1.5 text-gray-300"
-                  >
-                    Phone Number
-                  </label>
-                  <div className="phone-input-container">
-                    <PhoneInput
-                      country={"us"}
-                      value={formData.phone}
-                      onChange={handlePhoneChange}
-                      inputProps={{
-                        name: "phone",
-                        id: "phone",
-                        required: true,
-                        className: "w-full p-3 bg-zinc-800 text-white",
-                      }}
-                      containerClass="phone-input"
-                      buttonClass="phone-dropdown-button"
-                      dropdownClass="phone-dropdown"
-                      inputStyle={{ paddingLeft: "50px" }}
-                    />
-                  </div>
-                  {errors.phone && (
-                    <p className="mt-1 text-xs text-red-400">{errors.phone}</p>
-                  )}
-                </div>
-
                 {/* Password */}
                 <div>
                   <label
@@ -346,6 +285,28 @@ export default function UserSignupPage() {
                       {errors.confirmPassword}
                     </p>
                   )}
+                </div>
+
+                 <div className="flex justify-center">
+                  <ReCAPTCHA
+                    ref={recaptchaRef}
+                    sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY}
+                    onChange={handleRecaptchaChange}
+                    theme="dark"
+                  />
+                </div>
+
+                {/* Terms and Privacy Notice */}
+                <div className="text-sm text-gray-400 text-center mb-4">
+                  By registering for this service, you agree to our{" "}
+                  <Link to="/terms-conditions" className="text-yellow-500 hover:text-yellow-400">
+                    Terms & Conditions
+                  </Link>{" "}
+                  and{" "}
+                  <Link to="/privacy-policy" className="text-yellow-500 hover:text-yellow-400">
+                    Privacy Policy
+                  </Link>
+                  .
                 </div>
 
                 {/* Submit Button */}

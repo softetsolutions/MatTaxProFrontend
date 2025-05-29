@@ -7,6 +7,7 @@ import {
   X,
   Logs,
   Check,
+  Eye,
 } from "lucide-react";
 import { jwtDecode } from "jwt-decode";
 import { toast } from "react-toastify";
@@ -19,11 +20,18 @@ import {
   updateTransaction,
   deleteTransaction,
 } from "../../utils/transactionsApi";
-import { fetchAllVendors, updateVendor } from "../../utils/vendorApi";
+import { fetchAllVendors, updateVendor, createVendor } from "../../utils/vendorApi";
+import { fetchAllCategories, updateCategory, createCategory } from "../../utils/categoryApi";
+import { fetchAllAccounts, updateAccount, createAccount } from "../../utils/accountApi";
 import { downloadCSV } from "../../utils/convertAndDownloadCsv";
 import UploadCsv from "./UploadCsv";
+import { fetchReceipt, handleFileUpload as handleReceiptUpload } from "../../utils/receiptApi";
+import DateRangeFilter from "../../components/DateRangeFilter";
+import { filterTransactionsByDate } from "../../utils/dateFilter";
+import TransactionTypeFilter from "../../components/TransactionTypeFilter";
+import { getDefaultGstPercentage, saveGstPercentage, calculateGstAmount } from "../../utils/gstVatUtils";
 
-export default function TransactionsPage({ setIsTransasctionLog }) {
+export default function TransactionsPage({ setIsTransasctionLog, selectedUserId: propSelectedUserId }) {
   const [sortField, setSortField] = useState("date");
   const [sortDirection, setSortDirection] = useState("asc");
   const [showModal, setShowModal] = useState(false);
@@ -33,7 +41,8 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
     category: "",
     type: "moneyIn",
     vendor: "",
-    desc3:"",
+    desc3: "",
+    accountNo: "",
   });
   const [transactions, setTransactions] = useState([]);
   const [files, setFiles] = useState([]);
@@ -44,31 +53,42 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
   const [vendorSearch, setVendorSearch] = useState("");
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
   const [showVendorDropdown, setShowVendorDropdown] = useState(false);
-  const [searchQuery] = useState("");
   const [userRole, setUserRole] = useState(null);
-  const [selectedUserId, setSelectedUserId] = useState(null);
+  const [selectedUserId, setSelectedUserId] = useState(propSelectedUserId || null);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [userSearch, setUserSearch] = useState("");
   const [users, setUsers] = useState([]);
   const [vendorOptions, setVendorOptions] = useState([]);
+  const [categoryOptions, setCategoryOptions] = useState([]);
   const userRef = useRef(null);
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingVendorId, setEditingVendorId] = useState(null);
   const [editingVendorName, setEditingVendorName] = useState("");
   const [isUploadModalCsvOpen, setIsUploadModalCsvOpen] = useState(false);
-
-  // dropdown options
-  const categoryOptions = [
-    "Shopping",
-    "Entertainment",
-    "Groceries",
-    "Utilities",
-    "Transport",
-    "Other",
-  ];
+  const [showReceiptModal, setShowReceiptModal] = useState(false);
+  const [currentReceipt, setCurrentReceipt] = useState(null);
+  const [isLoadingReceipt, setIsLoadingReceipt] = useState(false);
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [transactionTypeFilter, setTransactionTypeFilter] = useState("all");
+  const [accountNumberSearch, setAccountNumberSearch] = useState("");
+  const [showAccountNumberDropdown, setShowAccountNumberDropdown] = useState(false);
+  const accountNumberRef = useRef(null);
+  const [accountOptions, setAccountOptions] = useState([]);
+  const [editingAccountId, setEditingAccountId] = useState(null);
+  const [editingAccountNumber, setEditingAccountNumber] = useState("");
+  const filteredAccountNumbers = accountOptions.filter((acc) =>
+    acc.number?.toLowerCase()?.includes(accountNumberSearch.toLowerCase())
+  );
+  const [editingCategoryId, setEditingCategoryId] = useState(null);
+  const [editingCategoryName, setEditingCategoryName] = useState("");
   const categoryRef = useRef(null);
   const vendorRef = useRef(null);
+  const [showGstVat, setShowGstVat] = useState(false);
+  const [gstVatAmount, setGstVatAmount] = useState("");
+  const [gstVatPercentage, setGstVatPercentage] = useState("");
+  const [isExtractingReceipt, setIsExtractingReceipt] = useState(false);
 
   // Initialize userRole once when component mounts
   useEffect(() => {
@@ -76,6 +96,10 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
     const decoded = jwtDecode(token);
     setUserRole(decoded.role);
   }, []);
+
+  useEffect(() => {
+    setSelectedUserId(propSelectedUserId || null);
+  }, [propSelectedUserId]);
 
   // Fetch transaction data when selectedUserId changes
   useEffect(() => {
@@ -87,10 +111,12 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
         const decoded = jwtDecode(token);
         const userId = decoded.id;
 
-        // For accountants -> fetch vendors if user  selected
+        // For accountants -> fetch vendors if user selected
         if (userRole === "accountant" && !selectedUserId) {
           setTransactions([]);
           setVendorOptions([]);
+          setCategoryOptions([]);
+          setAccountOptions([]);
           setLoading(false);
           return;
         }
@@ -98,6 +124,8 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
         const data = await Promise.allSettled([
           fetchTransactions(selectedUserId, navigate),
           fetchAllVendors(userRole === "accountant" ? selectedUserId : userId),
+          fetchAllCategories(userRole === "accountant" ? selectedUserId : userId),
+          fetchAllAccounts(userRole === "accountant" ? selectedUserId : userId),
         ]);
 
         const vendors = data[1].value.reduce((acc, vendor) => {
@@ -108,7 +136,28 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
           acc.push(vendorData);
           return acc;
         }, []);
+
+        const categories = data[2].value.reduce((acc, category) => {
+          let categoryData = {
+            id: category.id,
+            name: category.name,
+          };
+          acc.push(categoryData);
+          return acc;
+        }, []);
+
+        const accounts = data[3].value.reduce((acc, account) => {
+          let accountData = {
+            id: account.id,
+            number: account.accountNo, // Using name field as the display number
+          };
+          acc.push(accountData);
+          return acc;
+        }, []);
+
         setVendorOptions(vendors);
+        setCategoryOptions(categories);
+        setAccountOptions(accounts);
         setTransactions(data[0].value);
       } catch (err) {
         setError(err.message || "Failed to fetch transactions");
@@ -122,7 +171,7 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
     };
 
     fetchTransactionData();
-  }, [refreshTableList, selectedUserId, navigate]); // Removed userRole from dependencies
+  }, [refreshTableList, selectedUserId, navigate]);
 
   // Handle clicks outside of dropdowns
   useEffect(() => {
@@ -132,6 +181,9 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
       }
       if (vendorRef.current && !vendorRef.current.contains(event.target)) {
         setShowVendorDropdown(false);
+      }
+      if (accountNumberRef.current && !accountNumberRef.current.contains(event.target)) {
+        setShowAccountNumberDropdown(false);
       }
     }
 
@@ -158,34 +210,32 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
     });
   };
 
-  const handleFileChange = (e) => {
-    if (e.target.files.length > 0) {
-      setFiles(Array.from(e.target.files));
-    }
-  };
-
-  const handleFileDrop = (e) => {
-    e.preventDefault();
-    if (e.dataTransfer.files.length > 0) {
-      setFiles(Array.from(e.dataTransfer.files));
-    }
-  };
-
-  const handleDragOver = (e) => {
-    e.preventDefault();
-  };
-
   const handleSubmit = async (e) => {
     if (e) e.preventDefault();
-    const isEveryDataPresent = Object.values(formData).reduce((acc, value) => {
-      if (acc) {
-        acc = Boolean(value);
-      }
-      return acc;
-    }, true);
+    
+    // Check required fields
+    const requiredFields = {
+      amount: "Amount",
+      category: "Category",
+      type: "Transaction Type",
+      vendor: "Vendor",
+      desc3: "Transaction Details"
+    };
 
-    if (!isEveryDataPresent) {
-      toast.warning("Pls fill all the field");
+    const missingFields = Object.entries(requiredFields)
+      .filter(([key]) => {
+        if (key === 'category') {
+          return !formData[key] && !categorySearch;
+        }
+        if (key === 'vendor') {
+          return !formData[key] && !vendorSearch;
+        }
+        return !formData[key];
+      })
+      .map(([, label]) => label);
+
+    if (missingFields.length > 0) {
+      toast.warning(`Please fill in the following required fields: ${missingFields.join(", ")}`);
       return;
     }
 
@@ -216,21 +266,90 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
         const decoded = jwtDecode(token);
         const userId = decoded.id;
 
+        let categoryId = formData.category;
+        let accountId = formData.accountNo;
+        let vendorId = formData.vendor;
+        
+        // If there's a custom category but no category ID, create a new category
+        if (!categoryId && categorySearch) {
+          try {
+            const newCategory = await createCategory(
+              categorySearch,
+              userRole === "accountant" ? selectedUserId : userId
+            );
+            categoryId = newCategory.id;
+            
+            // Update the categories list
+            setCategoryOptions(prev => [...prev, { id: newCategory.id, name: categorySearch }]);
+          } catch (err) {
+            console.error("Error creating new category:", err);
+            toast.error("Failed to create new category");
+            return;
+          }
+        }
+
+        // If there's a custom vendor name in the search field, create a new vendor
+        if (vendorSearch && !vendorId) {
+          try {
+            const newVendor = await createVendor(
+              vendorSearch,
+              userRole === "accountant" ? selectedUserId : userId
+            );
+            vendorId = newVendor.id;
+            
+            // Update the vendors list
+            setVendorOptions(prev => [...prev, { id: newVendor.id, name: vendorSearch }]);
+          } catch (err) {
+            console.error("Error creating new vendor:", err);
+            toast.error("Failed to create new vendor");
+            return;
+          }
+        }
+        if (!accountId && accountNumberSearch) {
+          try {
+            const newAccount = await createAccount(
+              accountNumberSearch,
+              userRole === "accountant" ? selectedUserId : userId
+            );
+            accountId = newAccount.id;
+            
+            // Update the accounts list
+            setAccountOptions(prev => [...prev, { id: newAccount.id, number: newAccount.name }]);
+          } catch (err) {
+            console.error("Error creating new account:", err);
+            toast.error("Failed to create new account");
+            return;
+          }
+        }
+        if (!vendorId) {
+          toast.error("Please select or create a valid vendor");
+          return;
+        }
+
         const transactionData = {
           amount: parseFloat(formData.amount),
-          category: formData.category,
+          category: categoryId,
           type: formData.type,
-          vendorId: formData.vendor,
+          vendorId: vendorId,
           desc3: formData.desc3,
-          isdeleted: false,
-          userid: userRole === "accountant" ? selectedUserId : userId,
+          isDeleted: false,
+          userId: userRole === "accountant" ? selectedUserId : userId,
+          accountNo: accountId || formData.accountNo || null
         };
 
         if (files.length > 0) {
           const formDataObj = new FormData();
-          Object.entries(transactionData).forEach(([key, value]) => {
-            formDataObj.append(key, value);
-          });
+          // Append each field individually to ensure correct naming
+          formDataObj.append("amount", transactionData.amount);
+          formDataObj.append("category", transactionData.category);
+          formDataObj.append("type", transactionData.type);
+          formDataObj.append("vendorId", transactionData.vendorId);
+          formDataObj.append("desc3", transactionData.desc3);
+          formDataObj.append("isDeleted", transactionData.isDeleted);
+          formDataObj.append("userId", transactionData.userId);
+          if (transactionData.accountNo) {
+            formDataObj.append("accountNo", transactionData.accountNo);
+          }
           files.forEach((file) => {
             formDataObj.append("file", file);
           });
@@ -251,9 +370,18 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
           );
         }
 
-        setFormData({ amount: "", category: "", type: "moneyIn", vendor: "",desc3:"" });
+        setFormData({
+          amount: "",
+          category: "",
+          type: "moneyIn",
+          vendor: "",
+          desc3: "",
+          accountNo: "",
+        });
         setFiles([]);
-        setVendorSearch("")
+        setVendorSearch("");
+        setAccountNumberSearch("");
+        setCategorySearch("");
       }
     } catch (err) {
       console.error("Operation failed:", err);
@@ -271,7 +399,14 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
   const handleCloseModal = () => {
     setShowModal(false);
     setEditingId(null);
-    setFormData({ amount: "", category: "", type: "moneyIn", vendor: "",desc3:"" });
+    setFormData({
+      amount: "",
+      category: "",
+      type: "moneyIn",
+      vendor: "",
+      desc3: "",
+      accountNo: "",
+    });
     setFiles([]);
     setRefreshTableList((prev) => !prev);
   };
@@ -302,6 +437,7 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
         category: transactionToEdit.category,
         type: transactionToEdit.type,
         vendorId: transactionToEdit.vendorid,
+        accountNo: transactionToEdit.accountNo || "",
       });
       setEditingId(id);
       setShowModal(true);
@@ -323,27 +459,12 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
 
   // Filter functions dropdowns
   const filteredCategories = categoryOptions.filter((category) =>
-    category.toLowerCase().includes(categorySearch.toLowerCase())
+    category.name.toLowerCase().includes(categorySearch.toLowerCase())
   );
 
   const filteredVendors = vendorOptions.filter((vendor) =>
     vendor.name.toLowerCase().includes(vendorSearch.toLowerCase())
   );
-
-  const handleSelect = (type, value) => {
-    setFormData((prev) => ({
-      ...prev,
-      [type]: type === "vendor" ? value.id : value,
-    }));
-    if (type === "category") {
-      setCategorySearch("");
-      setShowCategoryDropdown(false);
-    } else {
-      setVendorSearch("");
-      setShowVendorDropdown(false);
-    }
-  };
-
   const sortedTransactions = [...transactions].sort((a, b) => {
     const modifier = sortDirection === "asc" ? 1 : -1;
 
@@ -355,17 +476,13 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
     return String(a[sortField]).localeCompare(String(b[sortField])) * modifier;
   });
 
-  const filteredTransactions = sortedTransactions.filter((transaction) => {
-    if (!searchQuery) return true;
-    const query = searchQuery.toLowerCase();
-    return (
-      transaction.category?.toLowerCase().includes(query) ||
-      transaction.type?.toLowerCase().includes(query) ||
-      transaction.vendorid?.toLowerCase().includes(query) ||
-      transaction.amount?.toLowerCase().includes(query) ||
-      transaction.created_at?.toLowerCase().includes(query)
-    );
-  });
+  const filteredTransactions = filterTransactionsByDate(
+    sortedTransactions.filter((txn) =>
+      transactionTypeFilter === "all" ? true : txn.type === transactionTypeFilter
+    ),
+    startDate,
+    endDate
+  );
 
   // Filter users based on search
   const filteredUsers = users.filter((user) =>
@@ -411,6 +528,150 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
     } catch (err) {
       console.error("Error updating vendor:", err);
       toast.error(err.message || "Failed to update vendor");
+    }
+  };
+
+  const handleViewReceipt = async (receiptId) => {
+    if (!receiptId) {
+      toast.info("No receipt available for this transaction");
+      return;
+    }
+
+    try {
+      setIsLoadingReceipt(true);
+      const base64Image = await fetchReceipt(receiptId, navigate);
+      
+      // Validate the base64 image data
+      if (!base64Image || typeof base64Image !== 'string' || base64Image.trim() === '') {
+        toast.warning("No receipt image found");
+        setIsLoadingReceipt(false);
+        return;
+      }
+      
+      // Only open modal if we have valid image data
+      setShowReceiptModal(true);
+      
+      // Create an image object to pre-load the image
+      const img = new Image();
+      img.onload = () => {
+        setCurrentReceipt(`data:image/jpeg;base64,${base64Image}`);
+        setIsLoadingReceipt(false);
+      };
+      
+      img.onerror = () => {
+        console.error("Error loading image preview");
+        setIsLoadingReceipt(false);
+        setShowReceiptModal(false);
+        toast.error("Failed to load receipt image. The format may be unsupported.");
+      };
+      
+      img.src = `data:image/jpeg;base64,${base64Image}`;
+    } catch (error) {
+      setIsLoadingReceipt(false);
+      setShowReceiptModal(false);
+      toast.error("Failed to load receipt. Please try again.");
+      console.error("Error loading receipt:", error);
+    }
+  };
+
+  // Add this function to clear date filters
+  const clearDateFilters = () => {
+    setStartDate("");
+    setEndDate("");
+  };
+
+  const handleAccountNumberUpdate = async (accountId, newNumber) => {
+    try {
+      await updateAccount(accountId, newNumber);
+      setAccountOptions((prev) =>
+        prev.map((account) =>
+          account.id === accountId ? { ...account, number: newNumber } : account
+        )
+      );
+      setEditingAccountId(null);
+      setEditingAccountNumber("");
+      toast.success("Account number updated successfully");
+    } catch (err) {
+      console.error("Error updating account number:", err);
+      toast.error(err.message || "Failed to update account number");
+    }
+  };
+
+  const handleCategoryNameUpdate = async (categoryId, newName) => {
+    try {
+      await updateCategory(categoryId, newName);
+      setCategoryOptions((prev) =>
+        prev.map((category) =>
+          category.id === categoryId ? { ...category, name: newName } : category
+        )
+      );
+      setEditingCategoryId(null);
+      setEditingCategoryName("");
+      toast.success("Category updated successfully");
+    } catch (err) {
+      console.error("Error updating category:", err);
+      toast.error(err.message || "Failed to update category");
+    }
+  };
+
+  // Function to handle percentage change with cookie update
+  const handleGstPercentageChange = (newPercentage) => {
+    setGstVatPercentage(newPercentage);
+    if (newPercentage) {
+      saveGstPercentage(newPercentage);
+      const calculatedAmount = calculateGstAmount(formData.amount, newPercentage);
+      setGstVatAmount(calculatedAmount);
+    } else {
+      setGstVatAmount("");
+    }
+  };
+
+  const handleFileUpload = async (e) => {
+    const uploadedFiles = Array.from(e.target.files || []);
+    if (uploadedFiles.length === 0) return;
+
+    setFiles(uploadedFiles);
+    
+    try {
+      setIsExtractingReceipt(true);
+      const result = await handleReceiptUpload(
+        uploadedFiles[0],
+        vendorOptions,
+        categoryOptions
+      );
+
+      if (!result.matchingVendor && result.extractedData.merchant) {
+        setVendorSearch(result.extractedData.merchant);
+      }
+      if (!result.matchingCategory && result.extractedData.category) {
+        setCategorySearch(result.extractedData.category);
+      }
+      // Update form data 
+      const newFormData = {
+        ...formData,
+        amount: result.extractedData.amount || '',
+        desc3: result.extractedData.description || '',
+        type: result.extractedData.type,
+        vendor: result.matchingVendor?.id || '',
+        category: result.matchingCategory?.id || '',
+        accountNo: result.extractedData.accountNumber || ''
+      };
+      setFormData(newFormData);
+
+      // Update search fields
+      if (result.extractedData.merchant) {
+        setVendorSearch(result.extractedData.merchant);
+      }
+      if (result.extractedData.category) {
+        setCategorySearch(result.extractedData.category);
+      }
+
+      toast.success('Receipt data extracted');
+    } catch (error) {
+      console.error('Error in handleFileUpload:', error);
+      toast.error(error.message || 'Failed to extract receipt data');
+    } finally {
+      setIsExtractingReceipt(false);
     }
   };
 
@@ -543,10 +804,30 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
                     : `bg-blue-600 hover:bg-blue-700`
                 } text-white text-sm font-medium rounded-md transition-colors hover:cursor-pointer`}
               >
-                Export Trasnsaction
+                Export Transaction
               </button>
             </>
           ) : null}
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <DateRangeFilter
+            startDate={startDate}
+            setStartDate={setStartDate}
+            endDate={endDate}
+            setEndDate={setEndDate}
+            onClear={clearDateFilters}
+          />
+          {/* Transaction Type Filter Dropdown */}
+          <TransactionTypeFilter
+            value={transactionTypeFilter}
+            onChange={setTransactionTypeFilter}
+          />
+        </div>
+        <div className="text-sm text-gray-500">
+          {filteredTransactions.length} transactions found
         </div>
       </div>
 
@@ -608,9 +889,7 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
                         colSpan="6"
                         className="px-4 py-6 text-center text-gray-500"
                       >
-                        {searchQuery
-                          ? "No matching transactions found"
-                          : "No transactions found"}
+                        No transactions found
                       </td>
                     </tr>
                   ) : (
@@ -635,7 +914,7 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
                           {txn.amount}
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-900">
-                          {txn.category}
+                          {categoryOptions.find((c) => String(c.id) === String(txn.category))?.name || txn.category}
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-900 capitalize">
                           {txn.type}
@@ -658,6 +937,13 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
                               title="Edit"
                             >
                               <Edit className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleViewReceipt(txn.id)}
+                              className="p-1 text-teal-600 hover:text-teal-800 rounded hover:bg-teal-50"
+                              title="View Receipt"
+                            >
+                              <Eye className="w-4 h-4" />
                             </button>
                             <button
                               onClick={() => handleDelete(txn.id)}
@@ -698,10 +984,6 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
               className="flex flex-col md:flex-row gap-6"
             >
               <div className="flex-1">
-                {/* <h4 className="font-medium text-gray-700 mb-3">
-                  Transaction Details
-                </h4> */}
-
                 <div className="mb-4">
                   <label
                     className="block text-gray-700 text-sm font-bold mb-2"
@@ -721,6 +1003,145 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
                     step="0.01"
                     min="0"
                   />
+                </div>
+
+                <div className="mb-4" ref={accountNumberRef}>
+                  <label className="block text-gray-700 text-sm font-bold mb-2">
+                    Account Number
+                  </label>
+                  <div className="relative">
+                    <div
+                      className="flex items-center w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer bg-white"
+                      onClick={() => setShowAccountNumberDropdown(true)}
+                    >
+                      <input
+                        type="text"
+                        value={
+                          accountOptions.find(acc => acc.number === formData.accountNo)?.number ||
+                          accountNumberSearch
+                        }
+                        onChange={e => {
+                          setAccountNumberSearch(e.target.value);
+                          setShowAccountNumberDropdown(true);
+                        }}
+                        className="w-full bg-transparent focus:outline-none text-sm text-black"
+                        placeholder="Search or type account number"
+                        autoComplete="off"
+                      />
+                      <ChevronDown className="w-4 h-4 text-gray-400" />
+                    </div>
+                    {showAccountNumberDropdown && (
+                      <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded shadow-lg">
+                        <div className="p-2 border-b">
+                          <div className="flex items-center border rounded bg-gray-50">
+                            <input
+                              type="text"
+                              value={accountNumberSearch}
+                              onChange={e => setAccountNumberSearch(e.target.value)}
+                              className="w-full p-2 bg-transparent focus:outline-none text-sm text-black"
+                              placeholder="Search account numbers..."
+                              autoFocus
+                            />
+                            {accountNumberSearch && (
+                              <button onClick={() => setAccountNumberSearch("")} className="p-2">
+                                <X className="w-4 h-4 text-gray-400" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                        <div className="max-h-60 overflow-y-auto">
+                          {filteredAccountNumbers.length > 0 ? (
+                            filteredAccountNumbers.map((acc) => (
+                              <div
+                                key={acc.id}
+                                className="px-4 py-2 hover:bg-blue-50 cursor-pointer text-black"
+                                onClick={() => {
+                                  setFormData(prev => ({ ...prev, accountNo: acc.number }));
+                                  setAccountNumberSearch(acc.number);
+                                  setShowAccountNumberDropdown(false);
+                                }}
+                              >
+                                {editingAccountId === acc.id ? (
+                                  <div className="flex items-center gap-2 w-full">
+                                    <input
+                                      type="text"
+                                      value={editingAccountNumber}
+                                      onChange={(e) =>
+                                        setEditingAccountNumber(e.target.value)
+                                      }
+                                      className="flex-grow p-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
+                                      onKeyDown={(e) => {
+                                        if (e.key === "Enter") {
+                                          handleAccountNumberUpdate(
+                                            acc.id,
+                                            editingAccountNumber
+                                          );
+                                        } else if (e.key === "Escape") {
+                                          setEditingAccountId(null);
+                                          setEditingAccountNumber("");
+                                        }
+                                      }}
+                                      autoFocus
+                                    />
+                                    <button
+                                      onClick={() =>
+                                        handleAccountNumberUpdate(
+                                          acc.id,
+                                          editingAccountNumber
+                                        )
+                                      }
+                                      className="p-1 text-green-600 hover:text-green-800 rounded hover:bg-green-50"
+                                      title="Save changes"
+                                    >
+                                      <Check className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                      onClick={() => {
+                                        setEditingAccountId(null);
+                                        setEditingAccountNumber("");
+                                      }}
+                                      className="p-1 text-red-600 hover:text-red-800 rounded hover:bg-red-50"
+                                      title="Cancel"
+                                    >
+                                      <X className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <div className="flex items-center gap-2 w-full">
+                                    <span
+                                      onClick={() => {
+                                        setFormData(prev => ({ ...prev, accountNo: acc.number }));
+                                        setAccountNumberSearch(acc.number);
+                                        setShowAccountNumberDropdown(false);
+                                      }}
+                                      className="flex-grow"
+                                    >
+                                      {acc.number}
+                                    </span>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setEditingAccountId(acc.id);
+                                        setEditingAccountNumber(acc.number);
+                                      }}
+                                      className="p-1 text-blue-600 hover:text-blue-800 rounded hover:bg-blue-50"
+                                      title="Edit account number"
+                                    >
+                                      <Edit className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            ))
+                          ) : (
+                            <div className="p-2 text-gray-500 text-center">
+                              No account numbers found
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <div className="mb-4">
@@ -744,45 +1165,107 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
                   />
                 </div>
 
+                <div className="mb-4">
+                  <label className="text-gray-700 text-sm font-bold mb-2 flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={showGstVat}
+                      onChange={e => {
+                        setShowGstVat(e.target.checked);
+                        if (!e.target.checked) {
+                          setGstVatAmount("");
+                          setGstVatPercentage("");
+                        } else {
+                          const defaultPercentage = getDefaultGstPercentage();
+                          setGstVatPercentage(defaultPercentage);
+                          const calculatedAmount = calculateGstAmount(formData.amount, defaultPercentage);
+                          setGstVatAmount(calculatedAmount);
+                        }
+                      }}
+                      className="form-checkbox h-4 w-4 text-blue-600"
+                    />
+                    GST/VAT
+                  </label>
+                  <div className="flex gap-4">
+                    <div className="flex-1">
+                      <label className="block text-xs text-gray-500 mb-1">GST/VAT Amount</label>
+                      <input
+                        type="number"
+                        value={gstVatAmount}
+                        disabled={!showGstVat || gstVatPercentage !== ""}
+                        onChange={e => {
+                          const newAmount = e.target.value;
+                          setGstVatAmount(newAmount);
+                          setGstVatPercentage("");
+                        }}
+                        className={`w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-black ${
+                          !showGstVat || gstVatPercentage !== "" ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'
+                        }`}
+                        placeholder="Enter amount"
+                        min="0"
+                        step="0.01"
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <label className="block text-xs text-gray-500 mb-1">GST/VAT %</label>
+                      <input
+                        type="number"
+                        value={gstVatPercentage}
+                        disabled={!showGstVat}
+                        onChange={e => handleGstPercentageChange(e.target.value)}
+                        className={`w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-black ${
+                          !showGstVat ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'
+                        }`}
+                        placeholder="Enter percentage"
+                        min="0"
+                        max="100"
+                        step="0.01"
+                      />
+                    </div>
+                  </div>
+                </div>
+
                 <div className="mb-4" ref={categoryRef}>
-                  <label
-                    className="block text-gray-700 text-sm font-bold mb-2"
-                    htmlFor="category"
-                  >
+                  <label className="block text-gray-700 text-sm font-bold mb-2">
                     Category
                   </label>
                   <div className="relative">
                     <div
                       className="flex items-center w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer bg-white"
-                      onClick={() =>
-                        setShowCategoryDropdown(!showCategoryDropdown)
-                      }
+                      onClick={() => setShowCategoryDropdown(true)}
                     >
-                      <span className="flex-grow text-gray-700">
-                        {formData.category || "Select a category"}
-                      </span>
+                      <input
+                        type="text"
+                        value={categoryOptions.find(c => c.id === formData.category)?.name || categorySearch}
+                        onChange={(e) => {
+                          setCategorySearch(e.target.value);
+                          setShowCategoryDropdown(true);
+                          // Set the custom category 
+                          setFormData(prev => ({
+                            ...prev,
+                            category: e.target.value
+                          }));
+                        }}
+                        className="w-full bg-transparent focus:outline-none text-sm text-black"
+                        placeholder="Search or type category name"
+                      />
                       <ChevronDown className="w-4 h-4 text-gray-400" />
                     </div>
 
                     {showCategoryDropdown && (
-                      <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded shadow-lg">
+                      <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded shadow-lg">
                         <div className="p-2 border-b">
-                          <div className="flex items-center border rounded bg-gray-50 text-black">
+                          <div className="flex items-center border rounded bg-gray-50">
                             <input
                               type="text"
                               value={categorySearch}
-                              onChange={(e) =>
-                                setCategorySearch(e.target.value)
-                              }
-                              className="w-full p-2 bg-transparent focus:outline-none text-sm"
+                              onChange={(e) => setCategorySearch(e.target.value)}
+                              className="w-full p-2 bg-transparent focus:outline-none text-sm text-black"
                               placeholder="Search categories..."
                               autoFocus
                             />
                             {categorySearch && (
-                              <button
-                                onClick={() => setCategorySearch("")}
-                                className="mr-2"
-                              >
+                              <button onClick={() => setCategorySearch("")} className="p-2">
                                 <X className="w-4 h-4 text-gray-400" />
                               </button>
                             )}
@@ -792,18 +1275,87 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
                           {filteredCategories.length > 0 ? (
                             filteredCategories.map((category) => (
                               <div
-                                key={category}
-                                onClick={() =>
-                                  handleSelect("category", category)
-                                }
-                                className="px-4 py-2 hover:bg-blue-50 cursor-pointer text-black"
+                                key={category.id}
+                                className="px-4 py-2 hover:bg-blue-50 cursor-pointer text-black flex justify-between items-center"
                               >
-                                {category}
+                                {editingCategoryId === category.id ? (
+                                  <div className="flex items-center gap-2 w-full">
+                                    <input
+                                      type="text"
+                                      value={editingCategoryName}
+                                      onChange={(e) =>
+                                        setEditingCategoryName(e.target.value)
+                                      }
+                                      className="flex-grow p-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
+                                      onKeyDown={(e) => {
+                                        if (e.key === "Enter") {
+                                          handleCategoryNameUpdate(
+                                            category.id,
+                                            editingCategoryName
+                                          );
+                                        } else if (e.key === "Escape") {
+                                          setEditingCategoryId(null);
+                                          setEditingCategoryName("");
+                                        }
+                                      }}
+                                      autoFocus
+                                    />
+                                    <button
+                                      onClick={() =>
+                                        handleCategoryNameUpdate(
+                                          category.id,
+                                          editingCategoryName
+                                        )
+                                      }
+                                      className="p-1 text-green-600 hover:text-green-800 rounded hover:bg-green-50"
+                                      title="Save changes"
+                                    >
+                                      <Check className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                      onClick={() => {
+                                        setEditingCategoryId(null);
+                                        setEditingCategoryName("");
+                                      }}
+                                      className="p-1 text-red-600 hover:text-red-800 rounded hover:bg-red-50"
+                                      title="Cancel"
+                                    >
+                                      <X className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <>
+                                    <span
+                                      onClick={() => {
+                                        setFormData((prev) => ({
+                                          ...prev,
+                                          category: category.id,
+                                        }));
+                                        setShowCategoryDropdown(false);
+                                        setCategorySearch(category.name);
+                                      }}
+                                      className="flex-grow"
+                                    >
+                                      {category.name}
+                                    </span>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setEditingCategoryId(category.id);
+                                        setEditingCategoryName(category.name);
+                                      }}
+                                      className="p-1 text-blue-600 hover:text-blue-800 rounded hover:bg-blue-50"
+                                      title="Edit category name"
+                                    >
+                                      <Edit className="w-4 h-4" />
+                                    </button>
+                                  </>
+                                )}
                               </div>
                             ))
                           ) : (
                             <div className="p-2 text-gray-500 text-center">
-                              No results found
+                              No categories found
                             </div>
                           )}
                         </div>
@@ -823,22 +1375,18 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
                     >
                       <input
                         type="text"
-                        value={formData.vendor}
+                        value={
+                          vendorOptions.find((v) => v.id === formData.vendor)
+                            ?.name || vendorSearch
+                        }
                         onChange={(e) => {
                           setVendorSearch(e.target.value);
                           setShowVendorDropdown(true);
-                          if (
-                            !filteredVendors.some(
-                              (v) =>
-                                v.name.toLowerCase() ===
-                                e.target.value.toLowerCase()
-                            )
-                          ) {
-                            setFormData((prev) => ({
-                              ...prev,
-                              vendor: e.target.value,
-                            }));
-                          }
+
+                          setFormData((prev) => ({
+                            ...prev,
+                            vendor: "",
+                          }));
                         }}
                         className="w-full bg-transparent focus:outline-none text-sm text-black"
                         placeholder="Search or type vendor name"
@@ -850,24 +1398,17 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
                     {showVendorDropdown && (
                       <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded shadow-lg">
                         <div className="p-2 border-b">
-                          {/* <div className="flex items-center border rounded bg-gray-50">
+                          <div className="flex items-center border rounded bg-gray-50">
                             <input
                               type="text"
                               value={vendorSearch}
                               onChange={(e) => {
                                 setVendorSearch(e.target.value);
-                                if (
-                                  !filteredVendors.some(
-                                    (v) =>
-                                      v.name.toLowerCase() ===
-                                      e.target.value.toLowerCase()
-                                  )
-                                ) {
-                                  setFormData((prev) => ({
-                                    ...prev,
-                                    vendor: e.target.value,
-                                  }));
-                                }
+                                // Clear the vendor ID when typing a new name
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  vendor: "",
+                                }));
                               }}
                               className="w-full p-2 bg-transparent focus:outline-none text-sm text-black"
                               placeholder="Search vendors..."
@@ -875,103 +1416,112 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
                             />
                             {vendorSearch && (
                               <button
-                                onClick={() => setVendorSearch("")}
+                                onClick={() => {
+                                  setVendorSearch("");
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    vendor: "",
+                                  }));
+                                }}
                                 className="p-2"
                               >
                                 <X className="w-4 h-4 text-gray-400" />
                               </button>
                             )}
-                          </div> */}
+                          </div>
                         </div>
                         <div className="max-h-60 overflow-y-auto">
-                          {filteredVendors.length > 0
-                            ? filteredVendors.map((vendor) => (
-                                <div
-                                  key={vendor.id}
-                                  className="px-4 py-2 hover:bg-blue-50 cursor-pointer text-black flex justify-between items-center"
-                                >
-                                  {editingVendorId === vendor.id ? (
-                                    <div className="flex items-center gap-2 w-full">
-                                      <input
-                                        type="text"
-                                        value={editingVendorName}
-                                        onChange={(e) =>
-                                          setEditingVendorName(e.target.value)
-                                        }
-                                        className="flex-grow p-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
-                                        onKeyDown={(e) => {
-                                          if (e.key === "Enter") {
-                                            handleVendorNameUpdate(
-                                              vendor.id,
-                                              editingVendorName
-                                            );
-                                          } else if (e.key === "Escape") {
-                                            setEditingVendorId(null);
-                                            setEditingVendorName("");
-                                          }
-                                        }}
-                                        autoFocus
-                                      />
-                                      <button
-                                        onClick={() =>
+                          {filteredVendors.length > 0 ? (
+                            filteredVendors.map((vendor) => (
+                              <div
+                                key={vendor.id}
+                                className="px-4 py-2 hover:bg-blue-50 cursor-pointer text-black flex justify-between items-center"
+                              >
+                                {editingVendorId === vendor.id ? (
+                                  <div className="flex items-center gap-2 w-full">
+                                    <input
+                                      type="text"
+                                      value={editingVendorName}
+                                      onChange={(e) =>
+                                        setEditingVendorName(e.target.value)
+                                      }
+                                      className="flex-grow p-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
+                                      onKeyDown={(e) => {
+                                        if (e.key === "Enter") {
                                           handleVendorNameUpdate(
                                             vendor.id,
                                             editingVendorName
-                                          )
-                                        }
-                                        className="p-1 text-green-600 hover:text-green-800 rounded hover:bg-green-50"
-                                        title="Save changes"
-                                      >
-                                        <Check className="w-4 h-4" />
-                                      </button>
-                                      <button
-                                        onClick={() => {
+                                          );
+                                        } else if (e.key === "Escape") {
                                           setEditingVendorId(null);
                                           setEditingVendorName("");
-                                        }}
-                                        className="p-1 text-red-600 hover:text-red-800 rounded hover:bg-red-50"
-                                        title="Cancel"
-                                      >
-                                        <X className="w-4 h-4" />
-                                      </button>
-                                    </div>
-                                  ) : (
-                                    <>
-                                      <span
-                                        onClick={() => {
-                                          setFormData((prev) => ({
-                                            ...prev,
-                                            vendor: vendor.name,
-                                          }));
-                                          setShowVendorDropdown(false);
-                                          setVendorSearch("");
-                                        }}
-                                        className="flex-grow"
-                                      >
-                                        {vendor.name}
-                                      </span>
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          setEditingVendorId(vendor.id);
-                                          setEditingVendorName(vendor.name);
-                                        }}
-                                        className="p-1 text-blue-600 hover:text-blue-800 rounded hover:bg-blue-50"
-                                        title="Edit vendor name"
-                                      >
-                                        <Edit className="w-4 h-4" />
-                                      </button>
-                                    </>
-                                  )}
-                                </div>
-                              ))
-                            : null}
+                                        }
+                                      }}
+                                      autoFocus
+                                    />
+                                    <button
+                                      onClick={() =>
+                                        handleVendorNameUpdate(
+                                          vendor.id,
+                                          editingVendorName
+                                        )
+                                      }
+                                      className="p-1 text-green-600 hover:text-green-800 rounded hover:bg-green-50"
+                                      title="Save changes"
+                                    >
+                                      <Check className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                      onClick={() => {
+                                        setEditingVendorId(null);
+                                        setEditingVendorName("");
+                                      }}
+                                      className="p-1 text-red-600 hover:text-red-800 rounded hover:bg-red-50"
+                                      title="Cancel"
+                                    >
+                                      <X className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <>
+                                    <span
+                                      onClick={() => {
+                                        setFormData((prev) => ({
+                                          ...prev,
+                                          vendor: vendor.id,
+                                        }));
+                                        setShowVendorDropdown(false);
+                                        setVendorSearch(vendor.name);
+                                      }}
+                                      className="flex-grow"
+                                    >
+                                      {vendor.name}
+                                    </span>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setEditingVendorId(vendor.id);
+                                        setEditingVendorName(vendor.name);
+                                      }}
+                                      className="p-1 text-blue-600 hover:text-blue-800 rounded hover:bg-blue-50"
+                                      title="Edit vendor name"
+                                    >
+                                      <Edit className="w-4 h-4" />
+                                    </button>
+                                  </>
+                                )}
+                              </div>
+                            ))
+                          ) : (
+                            <div className="p-2 text-gray-500 text-center">
+                              No vendors found
+                            </div>
+                          )}
                         </div>
                       </div>
                     )}
                   </div>
                 </div>
-
                 <div className="mb-6">
                   <label className="block text-gray-700 text-sm font-bold mb-2">
                     Transaction Type
@@ -1004,14 +1554,30 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
               </div>
 
               <div className="flex-1 border-l pl-6">
-                <h4 className="font-medium text-gray-700 mb-3">
-                  Upload Receipt
-                </h4>
-                <div
-                  className="border-2 border-dashed border-gray-300 rounded-lg p-6 flex flex-col items-center justify-center h-64 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer"
-                  onDragOver={handleDragOver}
-                  onDrop={handleFileDrop}
+                <h4 className="font-medium text-gray-700 mb-3">Upload Receipt</h4>
+                <div 
+                  className={`border-2 border-dashed border-gray-300 rounded-lg p-6 flex flex-col items-center justify-center h-64 bg-gray-50 relative ${
+                    isExtractingReceipt ? 'pointer-events-none' : ''
+                  }`}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const files = e.dataTransfer.files;
+                    if (files.length > 0) {
+                      handleFileUpload({ target: { files } });
+                    }
+                  }}
                 >
+                  {isExtractingReceipt && (
+                    <div className="absolute inset-0 bg-white/80 flex items-center justify-center flex-col gap-3 z-10">
+                      <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500"></div>
+                      <p className="text-sm text-gray-600">Extracting data from receipt...</p>
+                    </div>
+                  )}
                   <div className="w-16 h-16 mb-4 text-blue-500 flex items-center justify-center rounded-full bg-blue-100">
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
@@ -1026,39 +1592,21 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
                       <path d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
                     </svg>
                   </div>
-                  {files.length > 0 ? (
-                    <div className="w-full">
-                      <p className="mb-2 text-sm font-medium text-gray-700">
-                        Selected Files:
-                      </p>
-                      <ul className="text-xs text-gray-600 mb-4 max-h-20 overflow-y-auto">
-                        {files.map((file, index) => (
-                          <li key={index} className="truncate">
-                            {file.name}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  ) : (
-                    <>
-                      <p className="mb-2 text-sm font-medium text-gray-700">
-                        Drag & Drop files here
-                      </p>
-                      <p className="text-xs text-gray-500 mb-4">or</p>
-                    </>
-                  )}
-                  <label className="px-4 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors cursor-pointer">
+                  <p className="mb-2 text-sm font-medium text-gray-700">Drag & Drop files here</p>
+                  <p className="text-xs text-gray-500 mb-4">or</p>
+                  <label className={`px-4 py-2 bg-blue-600 text-white text-sm rounded transition-colors ${
+                    isExtractingReceipt ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-700 cursor-pointer'
+                  }`}>
                     Browse Files
                     <input
                       type="file"
                       className="hidden"
-                      onChange={handleFileChange}
-                      multiple
+                      onChange={handleFileUpload}
+                      accept="image/*,.pdf"
+                      disabled={isExtractingReceipt}
                     />
                   </label>
-                  <p className="text-xs text-gray-500 mt-2">
-                    Supported formats: JPG, PNG, PDF
-                  </p>
+                  <p className="text-xs text-gray-500 mt-2">Supported formats: JPG, PNG, PDF</p>
                 </div>
               </div>
             </form>
@@ -1101,6 +1649,55 @@ export default function TransactionsPage({ setIsTransasctionLog }) {
         <UploadCsv
           closeUploadModalCsvOpen={closeUploadModalCsvOpen}
         />
+      )}
+
+      {/* Add Receipt Modal */}
+      {showReceiptModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-lg shadow-xl border border-gray-200 max-w-4xl w-[80vw] max-h-[90vh] flex flex-col">
+            <div className="flex justify-between items-center p-4 border-b">
+              <h3 className="text-xl font-semibold text-gray-900">Receipt</h3>
+              <button
+                onClick={() => {
+                  setShowReceiptModal(false);
+                  setCurrentReceipt(null);
+                }}
+                className="text-gray-500 hover:text-red-500"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="p-6 overflow-auto flex-1 flex items-center justify-center min-h-[60vh]">
+              {isLoadingReceipt ? (
+                <div className="flex justify-center items-center h-64 w-full">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+                </div>
+              ) : (
+                <div className="flex items-center justify-center">
+                  <img
+                    src={currentReceipt}
+                    alt="Receipt"
+                    className="max-w-full h-auto min-h-[50vh] object-contain border border-gray-200 shadow-sm"
+                    onError={(e) => {
+                      console.error("Image failed to load",e);
+                    }}
+                  />
+                </div>
+              )}
+            </div>
+            <div className="p-4 border-t flex justify-between">
+              <button
+                onClick={() => {
+                  setShowReceiptModal(false);
+                  setCurrentReceipt(null);
+                }}
+                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 ml-auto"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
