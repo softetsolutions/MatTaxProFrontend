@@ -1591,62 +1591,64 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
                 </div>
               </div>
 
-              <div className="flex-1 border-l pl-6">
-                <h4 className="font-medium text-gray-700 mb-3">Upload Receipt</h4>
-                <div 
-                  className={`border-2 border-dashed border-gray-300 rounded-lg p-6 flex flex-col items-center justify-center h-64 bg-gray-50 relative ${
-                    isExtractingReceipt ? 'pointer-events-none' : ''
-                  }`}
-                  onDragOver={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                  }}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    const files = e.dataTransfer.files;
-                    if (files.length > 0) {
-                      handleFileUpload({ target: { files } });
-                    }
-                  }}
-                >
-                  {isExtractingReceipt && (
-                    <div className="absolute inset-0 bg-white/80 flex items-center justify-center flex-col gap-3 z-10">
-                      <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500"></div>
-                      <p className="text-sm text-gray-600">Extracting data from receipt...</p>
+              {!editingId && (
+                <div className="flex-1 border-l pl-6">
+                  <h4 className="font-medium text-gray-700 mb-3">Upload Receipt</h4>
+                  <div 
+                    className={`border-2 border-dashed border-gray-300 rounded-lg p-6 flex flex-col items-center justify-center h-64 bg-gray-50 relative ${
+                      isExtractingReceipt ? 'pointer-events-none' : ''
+                    }`}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      const files = e.dataTransfer.files;
+                      if (files.length > 0) {
+                        handleFileUpload({ target: { files } });
+                      }
+                    }}
+                  >
+                    {isExtractingReceipt && (
+                      <div className="absolute inset-0 bg-white/80 flex items-center justify-center flex-col gap-3 z-10">
+                        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500"></div>
+                        <p className="text-sm text-gray-600">Extracting data from receipt...</p>
+                      </div>
+                    )}
+                    <div className="w-16 h-16 mb-4 text-blue-500 flex items-center justify-center rounded-full bg-blue-100">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-8 w-8"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                      </svg>
                     </div>
-                  )}
-                  <div className="w-16 h-16 mb-4 text-blue-500 flex items-center justify-center rounded-full bg-blue-100">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-8 w-8"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <path d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
-                    </svg>
+                    <p className="mb-2 text-sm font-medium text-gray-700">Drag & Drop files here</p>
+                    <p className="text-xs text-gray-500 mb-4">or</p>
+                    <label className={`px-4 py-2 bg-blue-600 text-white text-sm rounded transition-colors ${
+                      isExtractingReceipt ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-700 cursor-pointer'
+                    }`}>
+                      Browse Files
+                      <input
+                        type="file"
+                        className="hidden"
+                        onChange={handleFileUpload}
+                        accept="image/*,.pdf"
+                        disabled={isExtractingReceipt}
+                      />
+                    </label>
+                    <p className="text-xs text-gray-500 mt-2">Supported formats: JPG, PNG, PDF</p>
                   </div>
-                  <p className="mb-2 text-sm font-medium text-gray-700">Drag & Drop files here</p>
-                  <p className="text-xs text-gray-500 mb-4">or</p>
-                  <label className={`px-4 py-2 bg-blue-600 text-white text-sm rounded transition-colors ${
-                    isExtractingReceipt ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-700 cursor-pointer'
-                  }`}>
-                    Browse Files
-                    <input
-                      type="file"
-                      className="hidden"
-                      onChange={handleFileUpload}
-                      accept="image/*,.pdf"
-                      disabled={isExtractingReceipt}
-                    />
-                  </label>
-                  <p className="text-xs text-gray-500 mt-2">Supported formats: JPG, PNG, PDF</p>
                 </div>
-              </div>
+              )}
             </form>
 
             <div className="flex justify-end gap-2 mt-6">
