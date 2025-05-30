@@ -1324,7 +1324,7 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
                             )}
                           </div>
                         </div>
-                        <div className="max-h-60 overflow-y-auto">
+                        <div className="max-h-40 overflow-y-auto">
                           {filteredCategories.length > 0 ? (
                             filteredCategories.map((category) => (
                               <div
@@ -1483,7 +1483,7 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
                             )}
                           </div>
                         </div>
-                        <div className="max-h-60 overflow-y-auto">
+                        <div className="max-h-40 overflow-y-auto pb-2">
                           {filteredVendors.length > 0 ? (
                             filteredVendors.map((vendor) => (
                               <div
@@ -1608,34 +1608,11 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
 
               {!editingId ? (
                 <div className="flex-1 border-l pl-6">
-                  <h4 className="font-medium text-gray-700 mb-3">Upload Receipt</h4>
-                  <div 
-                    className={`border-2 border-dashed border-gray-300 rounded-lg p-6 flex flex-col items-center justify-center h-64 bg-gray-50 relative ${
-                      isExtractingReceipt ? 'pointer-events-none' : ''
-                    }`}
-                    onDragOver={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                    }}
-                    onDrop={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      const files = e.dataTransfer.files;
-                      if (files.length > 0) {
-                        handleFileUpload({ target: { files } });
-                      }
-                    }}
-                  >
-                    {isExtractingReceipt && (
-                      <div className="absolute inset-0 bg-white/80 flex items-center justify-center flex-col gap-3 z-10">
-                        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500"></div>
-                        <p className="text-sm text-gray-600">Extracting data from receipt...</p>
-                      </div>
-                    )}
-                    <div className="w-16 h-16 mb-4 text-blue-500 flex items-center justify-center rounded-full bg-blue-100">
+                  <div className="bg-gray-50 rounded-lg p-6 border border-gray-200">
+                    <h4 className="font-medium text-gray-900 mb-4 flex items-center gap-2">
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
-                        className="h-8 w-8"
+                        className="h-5 w-5 text-blue-600"
                         viewBox="0 0 24 24"
                         fill="none"
                         stroke="currentColor"
@@ -1643,24 +1620,159 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
                         strokeLinecap="round"
                         strokeLinejoin="round"
                       >
-                        <path d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                        <polyline points="14 2 14 8 20 8" />
+                        <line x1="16" y1="13" x2="8" y2="13" />
+                        <line x1="16" y1="17" x2="8" y2="17" />
+                        <polyline points="10 9 9 9 8 9" />
                       </svg>
+                      Receipt Management
+                    </h4>
+                    <div className="flex gap-3 mb-6">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const input = document.createElement('input');
+                          input.type = 'file';
+                          input.accept = 'image/*,.pdf';
+                          input.onchange = (e) => {
+                            const files = e.target.files;
+                            if (files.length > 0) {
+                              setFiles(Array.from(files));
+                            }
+                          };
+                          input.click();
+                        }}
+                        className="flex-1 px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 shadow-sm"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-4 w-4"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+                          <polyline points="17 8 12 3 7 8" />
+                          <line x1="12" y1="3" x2="12" y2="15" />
+                        </svg>
+                        Upload Receipt
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const input = document.createElement('input');
+                          input.type = 'file';
+                          input.accept = 'image/*,.pdf';
+                          input.onchange = (e) => {
+                            const files = e.target.files;
+                            if (files.length > 0) {
+                              handleFileUpload({ target: { files } });
+                            }
+                          };
+                          input.click();
+                        }}
+                        className="flex-1 px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-all duration-300 flex items-center justify-center gap-2 shadow-sm"
+                      >
+                        Extract Receipt Data
+                        <span className="text-xs bg-gradient-to-r from-yellow-100 to-yellow-50 text-yellow-800 px-3 py-1.5 rounded-full ml-1.5 font-semibold border border-yellow-200 shadow-sm flex items-center gap-2 group/badge hover:from-yellow-200 hover:to-yellow-100 transition-all duration-300">
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="h-4 w-4 text-yellow-500 group-hover/badge:text-yellow-600 transition-colors"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                          </svg>
+                          <span className="relative">
+                            AI
+                            <span className="absolute -bottom-0.5 left-0 w-full h-0.5 bg-yellow-300 scale-x-0 group-hover/badge:scale-x-100 transition-transform duration-300"></span>
+                          </span>
+                        </span>
+                      </button>
                     </div>
-                    <p className="mb-2 text-sm font-medium text-gray-700">Drag & Drop files here</p>
-                    <p className="text-xs text-gray-500 mb-4">or</p>
-                    <label className={`px-4 py-2 bg-blue-600 text-white text-sm rounded transition-colors ${
-                      isExtractingReceipt ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-700 cursor-pointer'
-                    }`}>
-                      Browse Files
-                      <input
-                        type="file"
-                        className="hidden"
-                        onChange={handleFileUpload}
-                        accept="image/*,.pdf"
-                        disabled={isExtractingReceipt}
-                      />
-                    </label>
-                    <p className="text-xs text-gray-500 mt-2">Supported formats: JPG, PNG, PDF</p>
+                    <div 
+                      className={`border-2 border-dashed border-gray-300 rounded-lg p-6 flex flex-col items-center justify-center h-64 bg-white relative ${
+                        isExtractingReceipt ? 'pointer-events-none' : ''
+                      }`}
+                    >
+                      {isExtractingReceipt && (
+                        <div className="absolute inset-0 bg-white/90 flex items-center justify-center flex-col gap-3 z-10 rounded-lg">
+                          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500"></div>
+                          <p className="text-sm text-gray-600">Extracting data from receipt...</p>
+                        </div>
+                      )}
+                      {files.length > 0 ? (
+                        <div className="w-full h-full flex flex-col items-center justify-center">
+                          <div className="w-16 h-16 mb-4 text-blue-500 flex items-center justify-center rounded-full bg-blue-50">
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="h-8 w-8"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
+                              <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                          </div>
+                          <p className="text-sm font-medium text-gray-700 mb-2">
+                            {files.length} file{files.length > 1 ? 's' : ''} selected
+                          </p>
+                          <button
+                            onClick={() => setFiles([])}
+                            className="text-sm text-red-600 hover:text-red-700 flex items-center gap-1"
+                          >
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="h-4 w-4"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
+                              <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
+                            </svg>
+                            Remove
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="w-16 h-16 mb-4 text-blue-500 flex items-center justify-center rounded-full bg-blue-50">
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="h-8 w-8"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
+                              <path d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                            </svg>
+                          </div>
+                          <p className="mb-2 text-sm font-medium text-gray-700">No receipt selected</p>
+                          <p className="text-xs text-gray-500 text-center max-w-[200px]">
+                            Select a receipt using the buttons above to upload or extract data
+                          </p>
+                        </>
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-500 mt-3 text-center">
+                      Supported formats: JPG, PNG, PDF
+                    </p>
                   </div>
                 </div>
               ) : editingReceipt ? (
