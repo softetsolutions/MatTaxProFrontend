@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { ArrowUpDown, ArrowRight, User, Clock, FileText } from "lucide-react";
 import { jwtDecode } from "jwt-decode";
+import Pagination from "../../components/Pagination";
 
 export default function TransactionLog({
   setIsTransasctionLog,
@@ -9,50 +10,31 @@ export default function TransactionLog({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [transactionLogs, setTransactionLogs] = useState([]);
-  const [sortConfig, setSortConfig] = useState({
-    key: "transaction_id",
-    direction: "asc",
+  const [currentPage, setCurrentPage] = useState(() => {
+    const savedPage = localStorage.getItem('transactionLogCurrentPage');
+    return savedPage ? parseInt(savedPage, 10) : 1;
   });
-
-  // Group logs by transaction_id
-  const groupLogsByTransaction = (logs) => {
-    const groupedLogs = {};
-
-    logs.forEach((log) => {
-      const { transaction_id, edited_by, timestamp } = log;
-
-      if (!groupedLogs[transaction_id]) {
-        groupedLogs[transaction_id] = {
-          transaction_id,
-          edited_by,
-          timestamp,
-          changes: [],
-        };
-      }
-
-      groupedLogs[transaction_id].changes.push({
-        field_changed: log.field_changed,
-        old_value: log.old_value,
-        new_value: log.new_value,
-      });
-    });
-
-    return Object.values(groupedLogs);
-  };
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+  const [pageSize, setPageSize] = useState(10);
 
   useEffect(() => {
-    // First try to get from localStorage
+    localStorage.setItem('transactionLogCurrentPage', currentPage.toString());
+  }, [currentPage]);
+
+  useEffect(() => {
     const fetchData = async () => {
       const user = jwtDecode(localStorage.getItem("userToken"));
-
       try {
-        setLoading(true)
-        let response = await fetch(
-          `${
-            import.meta.env.VITE_BASE_URL
-          }/transaction/transactionLog/?userId=${
-            user.id
-          }&transactionId=${isTransasctionLog}`,
+        setLoading(true);
+        const queryParams = new URLSearchParams({
+          userId: user.id,
+          transactionId: isTransasctionLog,
+          page: currentPage,
+          limit: pageSize
+        }).toString();
+        const response = await fetch(
+          `${import.meta.env.VITE_BASE_URL}/transaction/transactionLog/?${queryParams}`,
           {
             method: "GET",
             headers: {
@@ -61,61 +43,31 @@ export default function TransactionLog({
             credentials: "include",
           }
         );
-        response = await response.json();
-        setTransactionLogs(response);
+        if (!response.ok) {
+          throw new Error("Failed to fetch transaction logs");
+        }
+        const data = await response.json();
+        if (data && Array.isArray(data.logs)) {
+          setTransactionLogs(data.logs);
+          setTotalPages(data.totalPages || 1);
+          setTotalItems(data.totalItems || 0);
+          setPageSize(data.limit || 10);
+        } else {
+          console.error("Unexpected data format:", data);
+          throw new Error("Received invalid data format from server");
+        }
       } catch (err) {
         setError(err.message || "Failed to fetch transactions");
         console.error("API Error:", err);
-        if (err.message.includes("Unauthorized")) {
-          handleUnauthoriz(navigate);
-        }
       } finally {
         setLoading(false);
       }
-
-      // initializeWithMockData()
     };
     fetchData();
-  }, []);
-
-  const sortLogs = (key) => {
-    let direction = "asc";
-    if (sortConfig.key === key && sortConfig.direction === "asc") {
-      direction = "desc";
-    }
-    setSortConfig({ key, direction });
-
-    const sortedLogs = [...transactionLogs].sort((a, b) => {
-      if (key === "transaction_id") {
-        return direction === "asc"
-          ? a.transaction_id - b.transaction_id
-          : b.transaction_id - a.transaction_id;
-      }
-
-      if (key === "changes") {
-        return direction === "asc"
-          ? a.changes.length - b.changes.length
-          : b.changes.length - a.changes.length;
-      }
-
-      if (key === "timestamp") {
-        const dateA = new Date(a[key]);
-        const dateB = new Date(b[key]);
-        return direction === "asc" ? dateA - dateB : dateB - dateA;
-      }
-
-      // For edited By comparison
-      const valueA = String(a[key]).toLowerCase();
-      const valueB = String(b[key]).toLowerCase();
-      return direction === "asc"
-        ? valueA.localeCompare(valueB)
-        : valueB.localeCompare(valueA);
-    });
-
-    setTransactionLogs(sortedLogs);
-  };
+  }, [isTransasctionLog, currentPage, pageSize]);
 
   const formatFieldName = (fieldName) => {
+    if (!fieldName || typeof fieldName !== "string") return "";
     if (fieldName === "transaction_type") return "Transaction Type";
     return fieldName.charAt(0).toUpperCase() + fieldName.slice(1);
   };
@@ -185,7 +137,6 @@ export default function TransactionLog({
                     <th
                       key={header.field}
                       className="px-4 py-3 cursor-pointer"
-                      onClick={() => sortLogs(header.field)}
                     >
                       <div className="flex items-center gap-1">
                         {header.label}
@@ -209,26 +160,24 @@ export default function TransactionLog({
                   transactionLogs.map((log, index) => (
                     <tr key={index} className="hover:bg-gray-50">
                       <td className="px-4 py-3 text-sm text-blue-600 font-mono">
-                        #{log.transaction_id}
+                        #
                       </td>
                       <td className="px-4 py-3 text-sm">
                         <div className="flex flex-col gap-2">
-                          {log.changes.map((change, idx) => (
+                          {Array.isArray(log.changes) && log.changes.map((change, idx) => (
                             <div
                               key={idx}
-                              className={
-                                idx !== 0 ? "pt-2 border-t border-gray-100" : ""
-                              }
+                              className={idx !== 0 ? "pt-2 border-t border-gray-100" : ""}
                             >
                               <span className="bg-purple-100 text-purple-800 px-2 py-0.5 rounded-full mr-2">
-                                {formatFieldName(change.field_changed)}
+                                {change.field_changed ? formatFieldName(change.field_changed) : "-"}
                               </span>
-                              <span className="text-red-600">
-                                {change.old_value}
+                              <span>
+                                {change.old_value ?? "-"}
                               </span>
                               <ArrowRight className="inline w-4 h-4 text-gray-400 mx-1" />
                               <span className="text-green-600">
-                                {change.new_value}
+                                {change.new_value ?? "-"}
                               </span>
                             </div>
                           ))}
@@ -252,6 +201,16 @@ export default function TransactionLog({
               </tbody>
             </table>
           </div>
+          {transactionLogs.length > 0 && (
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={totalItems}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
+              className="mt-4"
+            />
+          )}
         </div>
       </div>
     </div>

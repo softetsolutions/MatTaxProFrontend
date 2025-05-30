@@ -1,50 +1,65 @@
-import { ChevronLeft, ChevronRight } from "lucide-react"
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
-export default function Pagination() {
+const Pagination = ({
+  currentPage,
+  totalPages,
+  totalItems,
+  pageSize,
+  onPageChange,
+  className = '',
+}) => {
+  const startItem = ((currentPage - 1) * pageSize) + 1;
+  const endItem = Math.min(currentPage * pageSize, totalItems);
+
   return (
-    <div className="flex items-center justify-center gap-1 px-4 py-6">
-      {/* Previous Button */}
-      <button
-        className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-700 shadow-sm transition-colors hover:bg-gray-50 hover:border-gray-400 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-        aria-label="Go to previous page"
-      >
-        <ChevronLeft className="h-4 w-4" />
-      </button>
-
-      {/* Page Numbers */}
-      <button
-        aria-label="Page 1"
-        aria-current="page"
-      >
-        1
-      </button>
-      <button
-        className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 cursor-pointer"
-        aria-label="Go to page 2"
-      >
-        2
-      </button>
-      <button
-        className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 cursor-pointer"
-        aria-label="Go to page 3"
-      >
-        3
-      </button>
-      <span className="flex h-9 w-9 items-center justify-center text-sm text-gray-500">...</span>
-      <button
-        className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 cursor-pointer"
-        aria-label="Go to page 10"
-      >
-        10
-      </button>
-
-      {/* Next Button */}
-      <button
-        className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-700 shadow-sm transition-colors hover:bg-gray-50 hover:border-gray-400 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-        aria-label="Go to next page"
-      >
-        <ChevronRight className="h-4 w-4" />
-      </button>
+    <div className={`flex items-center justify-between ${className}`}>
+      <div className="text-sm text-gray-500">
+        Showing {startItem} to {endItem} of {totalItems} items
+      </div>
+      <div className="flex items-center gap-2">
+        <button
+          onClick={() => onPageChange(currentPage - 1)}
+          disabled={currentPage === 1}
+          className={`p-2 rounded transition-colors ${
+            currentPage === 1
+              ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+              : 'bg-blue-600 text-white hover:bg-blue-700'
+          }`}
+          aria-label="Previous page"
+        >
+          <ChevronLeft className="w-5 h-5" />
+        </button>
+        <div className="flex items-center gap-2">
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+            <button
+              key={page}
+              onClick={() => onPageChange(page)}
+              className={`px-3 py-1 rounded transition-colors ${
+                currentPage === page
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+              aria-label={`Go to page ${page}`}
+            >
+              {page}
+            </button>
+          ))}
+        </div>
+        <button
+          onClick={() => onPageChange(currentPage + 1)}
+          disabled={currentPage === totalPages}
+          className={`p-2 rounded transition-colors ${
+            currentPage === totalPages
+              ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+              : 'bg-blue-600 text-white hover:bg-blue-700'
+          }`}
+          aria-label="Next page"
+        >
+          <ChevronRight className="w-5 h-5" />
+        </button>
+      </div>
     </div>
-  )
-}
+  );
+};
+
+export default Pagination;

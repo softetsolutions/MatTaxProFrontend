@@ -2,18 +2,18 @@ import { getAuthInfo } from "./auth";
 import { handleUnauthoriz } from "./helperFunction";
 import { toast } from "react-toastify";
 
-export const fetchTransactions = async (selectedUserId = null, navigate) => {
+export const fetchTransactions = async (selectedUserId = null, navigate, page = 1, limit = 10) => {
   try {
     const { userId, role } = getAuthInfo();
 
     let url;
     if (role === "accountant") {
       if (!selectedUserId) {
-        return [];
+        return { transactions: [], totalPages: 0, totalItems: 0, limit };
       }
-      url = `${import.meta.env.VITE_BASE_URL}/transaction?userId=${selectedUserId}&accountId=${userId}`;
+      url = `${import.meta.env.VITE_BASE_URL}/transaction?userId=${selectedUserId}&accountId=${userId}&page=${page}&limit=${limit}`;
     } else {
-      url = `${import.meta.env.VITE_BASE_URL}/transaction?userId=${userId}`;
+      url = `${import.meta.env.VITE_BASE_URL}/transaction?userId=${userId}&page=${page}&limit=${limit}`;
     }
 
     const response = await fetch(url, {
@@ -33,11 +33,16 @@ export const fetchTransactions = async (selectedUserId = null, navigate) => {
     }
 
     const data = await response.json();
+    // Handle paginated response
+    const transactions = data.transactions || [];
     // Ensure vendorname is mapped from vendor if not present
-    return data.map(txn => ({
-      ...txn,
-      vendorname: txn.vendorname || txn.vendor || "Unknown"
-    }));
+    return {
+      ...data,
+      transactions: transactions.map(txn => ({
+        ...txn,
+        vendorname: txn.vendorname || txn.vendor || "Unknown"
+      }))
+    };
   } catch (err) {
     toast.error("Failed to load Transactions");
     console.error("Error fetching transactions:", err);

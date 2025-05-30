@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import DateRangeFilter from "../../components/DateRangeFilter";
 import { fetchTransactions } from "../../utils/transactionsApi";
 import { toast } from "react-toastify";
-
+import Pagination from "../../components/Pagination";
 
 export default function Reports() {
   const [endDate, setEndDate] = useState("");
@@ -11,8 +11,20 @@ export default function Reports() {
   const [allTransaction, setAllTransaction] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [currentPage, setCurrentPage] = useState(() => {
+    const savedPage = localStorage.getItem('reportsCurrentPage');
+    return savedPage ? parseInt(savedPage, 10) : 1;
+  });
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+  const [pageSize, setPageSize] = useState(10);
 
   const navigate = useNavigate();
+
+  // Update localStorage when currentPage changes
+  useEffect(() => {
+    localStorage.setItem('reportsCurrentPage', currentPage.toString());
+  }, [currentPage]);
 
   const clearDateFilters = () => {
     setStartDate("");
@@ -23,9 +35,17 @@ export default function Reports() {
     const fetchTransaction = async () => {
       setLoading(true);
       try {
-        const data = await fetchTransactions(null, navigate);
+        const data = await fetchTransactions(null, navigate, currentPage, pageSize);
         
-        setAllTransaction(data || []);
+        if (data && data.transactions) {
+          setAllTransaction(data.transactions);
+          setTotalPages(data.totalPages || 1);
+          setTotalItems(data.totalItems || 0);
+          setPageSize(data.limit || 10);
+        } else {
+          console.error("Unexpected data format:", data);
+          throw new Error("Received invalid data format from server");
+        }
       } catch (err) {
         setError(err.message || "Failed to fetch transactions");
         console.error("API Error:", err);
@@ -34,7 +54,7 @@ export default function Reports() {
       }
     };
     fetchTransaction();
-  }, []);
+  }, [navigate, currentPage, pageSize]);
 
   //  Filter by date range
 const parseInputDate = (input, isEnd = false) => {
@@ -228,6 +248,16 @@ const handleDownloadCSV = () => {
             )}
           </tbody>
         </table>
+        {allTransaction.length > 0 && (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={totalItems}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+            className="mt-4"
+          />
+        )}
       </div>
     </div>
   );

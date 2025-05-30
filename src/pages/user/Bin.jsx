@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { ArrowUpDown, Trash2, RefreshCw } from "lucide-react";
 import { jwtDecode } from "jwt-decode";
 import { toast } from "react-toastify";
+import Pagination from "../../components/Pagination";
 
 export default function BinPage() {
   const [deletedTransactions, setDeletedTransactions] = useState([]);
@@ -9,6 +10,18 @@ export default function BinPage() {
   const [sortDirection, setSortDirection] = useState("asc");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [currentPage, setCurrentPage] = useState(() => {
+    const savedPage = localStorage.getItem('binCurrentPage');
+    return savedPage ? parseInt(savedPage, 10) : 1;
+  });
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+  const [pageSize, setPageSize] = useState(10);
+
+  // Update localStorage when currentPage changes
+  useEffect(() => {
+    localStorage.setItem('binCurrentPage', currentPage.toString());
+  }, [currentPage]);
 
   useEffect(() => {
     const fetchDeletedTransactions = async () => {
@@ -19,6 +32,8 @@ export default function BinPage() {
 
         const queryParams = new URLSearchParams({
           userId: userId,
+          page: currentPage,
+          limit: pageSize
         }).toString();
 
         const response = await fetch(
@@ -46,8 +61,11 @@ export default function BinPage() {
         }
 
         const data = await response.json();
-        if (Array.isArray(data)) {
-          setDeletedTransactions(data);
+        if (data && data.transactions) {
+          setDeletedTransactions(data.transactions);
+          setTotalPages(data.totalPages || 1);
+          setTotalItems(data.totalItems || 0);
+          setPageSize(data.limit || 10);
         } else {
           console.error("Unexpected data format:", data);
           throw new Error("Received invalid data format from server");
@@ -66,7 +84,7 @@ export default function BinPage() {
     };
 
     fetchDeletedTransactions();
-  }, []);
+  }, [currentPage, pageSize]);
 
   const handleSort = (field) => {
     if (sortField === field) {
@@ -347,6 +365,16 @@ export default function BinPage() {
               </tbody>
             </table>
           </div>
+          {deletedTransactions.length > 0 && (
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={totalItems}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
+              className="mt-4"
+            />
+          )}
         </div>
       </div>
     </div>

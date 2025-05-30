@@ -61,6 +61,13 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
   const [users, setUsers] = useState([]);
   const [vendorOptions, setVendorOptions] = useState([]);
   const [categoryOptions, setCategoryOptions] = useState([]);
+  const [currentPage, setCurrentPage] = useState(() => {
+    const savedPage = localStorage.getItem('transactionsCurrentPage');
+    return savedPage ? parseInt(savedPage, 10) : 1;
+  });
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+  const [pageSize, setPageSize] = useState(10);
   const userRef = useRef(null);
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -123,7 +130,7 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
         }
 
         const data = await Promise.allSettled([
-          fetchTransactions(selectedUserId, navigate),
+          fetchTransactions(selectedUserId, navigate, currentPage, pageSize),
           fetchAllVendors(userRole === "accountant" ? selectedUserId : userId),
           fetchAllCategories(userRole === "accountant" ? selectedUserId : userId),
           fetchAllAccounts(userRole === "accountant" ? selectedUserId : userId),
@@ -150,7 +157,7 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
         const accounts = data[3].value.reduce((acc, account) => {
           let accountData = {
             id: account.id,
-            number: account.accountNo, // Using name field as the display number
+            number: account.accountNo,
           };
           acc.push(accountData);
           return acc;
@@ -159,7 +166,13 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
         setVendorOptions(vendors);
         setCategoryOptions(categories);
         setAccountOptions(accounts);
-        setTransactions(data[0].value);
+        
+        // Handle paginated transactions response
+        const transactionsResponse = data[0].value;
+        setTransactions(transactionsResponse.transactions || []);
+        setTotalPages(transactionsResponse.totalPages || 1);
+        setTotalItems(transactionsResponse.totalItems || 0);
+        setPageSize(transactionsResponse.limit || 10);
       } catch (err) {
         setError(err.message || "Failed to fetch transactions");
         console.error("API Error:", err);
@@ -172,7 +185,7 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
     };
 
     fetchTransactionData();
-  }, [refreshTableList, selectedUserId, navigate]);
+  }, [refreshTableList, selectedUserId, navigate, currentPage]);
 
   // Handle clicks outside of dropdowns
   useEffect(() => {
@@ -671,6 +684,17 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
     }
   };
 
+  // Update localStorage when currentPage changes
+  useEffect(() => {
+    localStorage.setItem('transactionsCurrentPage', currentPage.toString());
+  }, [currentPage]);
+
+  // Reset page to 1 when user changes
+  useEffect(() => {
+    setCurrentPage(1);
+    localStorage.setItem('transactionsCurrentPage', '1');
+  }, [selectedUserId]);
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-screen">
@@ -965,7 +989,14 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
               </table>
             </div>
             {filteredTransactions.length > 0 && (
-              <Pagination />
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={totalItems}
+                pageSize={pageSize}
+                onPageChange={setCurrentPage}
+                className="mt-4"
+              />
             )}
           </div>
         )}
