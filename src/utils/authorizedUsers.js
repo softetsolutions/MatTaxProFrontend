@@ -1,3 +1,4 @@
+import { toast } from "react-toastify";
 import { getAuthInfo } from "./auth";
 
 export const fetchAuthorizedUsers = async () => {
@@ -148,6 +149,7 @@ export const fetchAccountants = async () => {
     return data;
   } catch (err) {
     console.error("Error fetching accountants:", err);
+    toast.error("Failed to load Accountants");
     throw err;
   }
 };

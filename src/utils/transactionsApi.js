@@ -1,5 +1,6 @@
 import { getAuthInfo } from "./auth";
 import { handleUnauthoriz } from "./helperFunction";
+import { toast } from "react-toastify";
 
 export const fetchTransactions = async (selectedUserId = null, navigate) => {
   try {
@@ -38,6 +39,7 @@ export const fetchTransactions = async (selectedUserId = null, navigate) => {
       vendorname: txn.vendorname || txn.vendor || "Unknown"
     }));
   } catch (err) {
+    toast.error("Failed to load Transactions");
     console.error("Error fetching transactions:", err);
     throw err;
   }

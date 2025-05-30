@@ -225,15 +225,24 @@ export default function InvitationPage() {
   }
 
   if (error) {
+    toast.error("Failed to load invitations");
     return (
-      <div className="p-6 text-center text-red-500">
-        {error}
-        <button
-          onClick={() => window.location.reload()}
-          className="ml-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-        >
-          Retry
-        </button>
+      <div className="flex items-center justify-center min-h-[60vh] bg-white">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-8 flex flex-col items-center shadow-md">
+          <div className="mb-4">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9 9 4.03 9 9z" />
+            </svg>
+          </div>
+          <div className="text-lg font-semibold text-red-600 mb-2">Failed to load Invitations</div>
+          <div className="text-sm text-red-500 mb-6">Please check your connection or try again later.</div>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors shadow"
+          >
+            Retry
+          </button>
+        </div>
       </div>
     );
   }
