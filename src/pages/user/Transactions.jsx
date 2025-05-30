@@ -30,6 +30,7 @@ import DateRangeFilter from "../../components/DateRangeFilter";
 import { filterTransactionsByDate } from "../../utils/dateFilter";
 import TransactionTypeFilter from "../../components/TransactionTypeFilter";
 import { getDefaultGstPercentage, saveGstPercentage, calculateGstAmount } from "../../utils/gstVatUtils";
+import Pagination from "../../components/Pagination";
 
 export default function TransactionsPage({ setIsTransasctionLog, selectedUserId: propSelectedUserId }) {
   const [sortField, setSortField] = useState("date");
@@ -955,6 +956,9 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
                 </tbody>
               </table>
             </div>
+            {filteredTransactions.length > 0 && (
+              <Pagination />
+            )}
           </div>
         )}
       </div>
