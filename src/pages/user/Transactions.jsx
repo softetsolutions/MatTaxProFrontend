@@ -97,6 +97,7 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
   const [gstVatAmount, setGstVatAmount] = useState("");
   const [gstVatPercentage, setGstVatPercentage] = useState("");
   const [isExtractingReceipt, setIsExtractingReceipt] = useState(false);
+  const [editingReceipt, setEditingReceipt] = useState(null);
 
   // Initialize userRole once when component mounts
   useEffect(() => {
@@ -408,6 +409,7 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
   const handleCloseModal = () => {
     setShowModal(false);
     setEditingId(null);
+    setEditingReceipt(null);
     setFormData({
       amount: "",
       category: "",
@@ -438,7 +440,7 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
     };
   }, [showModal, formData, editingId]);
 
-  const handleEdit = (id) => {
+  const handleEdit = async (id) => {
     const transactionToEdit = transactions.find((txn) => txn.id === id);
     if (transactionToEdit) {
       setFormData({
@@ -450,6 +452,19 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
       });
       setEditingId(id);
       setShowModal(true);
+
+      // Try to fetch receipt if it exists
+      try {
+        const base64Image = await fetchReceipt(id, navigate);
+        if (base64Image && typeof base64Image === 'string' && base64Image.trim() !== '') {
+          setEditingReceipt(`data:image/jpeg;base64,${base64Image}`);
+        } else {
+          setEditingReceipt(null);
+        }
+      } catch (error) {
+        console.error("Error fetching receipt:", error);
+        setEditingReceipt(null);
+      }
     }
   };
 
@@ -1591,7 +1606,7 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
                 </div>
               </div>
 
-              {!editingId && (
+              {!editingId ? (
                 <div className="flex-1 border-l pl-6">
                   <h4 className="font-medium text-gray-700 mb-3">Upload Receipt</h4>
                   <div 
@@ -1648,7 +1663,18 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
                     <p className="text-xs text-gray-500 mt-2">Supported formats: JPG, PNG, PDF</p>
                   </div>
                 </div>
-              )}
+              ) : editingReceipt ? (
+                <div className="flex-1 border-l pl-6">
+                  <h4 className="font-medium text-gray-700 mb-3">Current Receipt</h4>
+                  <div className="border border-gray-200 rounded-lg p-4 bg-white">
+                    <img
+                      src={editingReceipt}
+                      alt="Current Receipt"
+                      className="w-full h-[calc(100vh-400px)] min-h-[400px] object-contain"
+                    />
+                  </div>
+                </div>
+              ) : null}
             </form>
 
             <div className="flex justify-end gap-2 mt-6">
