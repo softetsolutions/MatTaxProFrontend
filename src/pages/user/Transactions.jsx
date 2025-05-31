@@ -285,21 +285,32 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
         let accountId = formData.accountNo;
         let vendorId = formData.vendor;
         
-        // If there's a custom category but no category ID, create a new category
-        if (!categoryId && categorySearch) {
-          try {
-            const newCategory = await createCategory(
-              categorySearch,
-              userRole === "accountant" ? selectedUserId : userId
-            );
-            categoryId = newCategory.id;
-            
-            // Update the categories list
-            setCategoryOptions(prev => [...prev, { id: newCategory.id, name: categorySearch }]);
-          } catch (err) {
-            console.error("Error creating new category:", err);
-            toast.error("Failed to create new category");
-            return;
+        // If there's a category search term but no category ID
+        if (categorySearch && !categoryId) {
+          // First check if the category already exists
+          const existingCategory = categoryOptions.find(
+            c => c.name.toLowerCase() === categorySearch.toLowerCase()
+          );
+          
+          if (existingCategory) {
+            // Use the existing category ID
+            categoryId = existingCategory.id;
+          } else {
+            // Create new category only if it doesn't exist
+            try {
+              const newCategory = await createCategory(
+                categorySearch,
+                userRole === "accountant" ? selectedUserId : userId
+              );
+              categoryId = newCategory.id;
+              
+              // Update the categories list
+              setCategoryOptions(prev => [...prev, { id: newCategory.id, name: categorySearch }]);
+            } catch (err) {
+              console.error("Error creating new category:", err);
+              toast.error("Failed to create new category");
+              return;
+            }
           }
         }
 
@@ -341,6 +352,11 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
           return;
         }
 
+        if (!categoryId) {
+          toast.error("Please select or create a valid category");
+          return;
+        }
+
         const transactionData = {
           amount: parseFloat(formData.amount),
           category: categoryId,
@@ -349,7 +365,7 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
           desc3: formData.desc3,
           isDeleted: false,
           userId: userRole === "accountant" ? selectedUserId : userId,
-          accountNo: accountId || formData.accountNo || null
+          accountNo: accountId
         };
 
         if (files.length > 0) {
@@ -362,9 +378,7 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
           formDataObj.append("desc3", transactionData.desc3);
           formDataObj.append("isDeleted", transactionData.isDeleted);
           formDataObj.append("userId", transactionData.userId);
-          if (transactionData.accountNo) {
-            formDataObj.append("accountNo", transactionData.accountNo);
-          }
+          formDataObj.append("accountNo", transactionData.accountNo);
           files.forEach((file) => {
             formDataObj.append("file", file);
           });
@@ -443,13 +457,24 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
   const handleEdit = async (id) => {
     const transactionToEdit = transactions.find((txn) => txn.id === id);
     if (transactionToEdit) {
+      const category = categoryOptions.find(c => String(c.id) === String(transactionToEdit.category));
+      const vendor = vendorOptions.find(v => String(v.id) === String(transactionToEdit.vendorid));
+      const account = accountOptions.find(a => String(a.id) === String(transactionToEdit.accountno));
+      
       setFormData({
         amount: transactionToEdit.amount.replace("$", ""),
         category: transactionToEdit.category,
         type: transactionToEdit.type,
-        vendorId: transactionToEdit.vendorid,
-        accountNo: transactionToEdit.accountNo || "",
+        vendor: transactionToEdit.vendorid,
+        desc3: transactionToEdit.desc3 || "",
+        accountNo: transactionToEdit.accountno || "",
       });
+
+      // Set search values for dropdowns
+      if (category) setCategorySearch(category.name);
+      if (vendor) setVendorSearch(vendor.name);
+      if (account) setAccountNumberSearch(account.number);
+
       setEditingId(id);
       setShowModal(true);
 
@@ -893,8 +918,6 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
                     {[
                       { field: "created_at", label: "Date" },
                       { field: "Desc3", label: "Transaction Detail" },
-                      { field: "Desc2", label: "SortCode" },
-                      { field: "Desc1", label: "Account" },
                       { field: "amount", label: "Amount" },
                       { field: "category", label: "Category" },
                       { field: "type", label: "Type" },
@@ -946,12 +969,6 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-900">
                           {txn.desc3 ?? " - "}
-                        </td>
-                        <td className="px-4 py-3 text-sm text-gray-900">
-                          {txn.desc2 ?? " - "}
-                        </td>
-                        <td className="px-4 py-3 text-sm text-gray-900">
-                          {txn.desc1 ?? " - "}
                         </td>
                         <td className="px-4 py-3 text-sm font-medium text-gray-900">
                           {txn.amount}
@@ -1109,7 +1126,7 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
                                 key={acc.id}
                                 className="px-4 py-2 hover:bg-blue-50 cursor-pointer text-black"
                                 onClick={() => {
-                                  setFormData(prev => ({ ...prev, accountNo: acc.number }));
+                                  setFormData(prev => ({ ...prev, accountNo: acc.id }));
                                   setAccountNumberSearch(acc.number);
                                   setShowAccountNumberDropdown(false);
                                 }}
@@ -1163,7 +1180,7 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
                                   <div className="flex items-center gap-2 w-full">
                                     <span
                                       onClick={() => {
-                                        setFormData(prev => ({ ...prev, accountNo: acc.number }));
+                                        setFormData(prev => ({ ...prev, accountNo: acc.id }));
                                         setAccountNumberSearch(acc.number);
                                         setShowAccountNumberDropdown(false);
                                       }}
@@ -1293,10 +1310,10 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
                         onChange={(e) => {
                           setCategorySearch(e.target.value);
                           setShowCategoryDropdown(true);
-                          // Set the custom category 
+                          // Clear the category ID when typing a new name
                           setFormData(prev => ({
                             ...prev,
-                            category: e.target.value
+                            category: ""
                           }));
                         }}
                         className="w-full bg-transparent focus:outline-none text-sm text-black"
