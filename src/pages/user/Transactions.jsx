@@ -8,7 +8,6 @@ import {
   Logs,
   Check,
   Eye,
-  Upload,
 } from "lucide-react";
 import { jwtDecode } from "jwt-decode";
 import { toast } from "react-toastify";
@@ -26,7 +25,7 @@ import { fetchAllCategories, updateCategory, createCategory } from "../../utils/
 import { fetchAllAccounts, updateAccount, createAccount } from "../../utils/accountApi";
 import { downloadCSV } from "../../utils/convertAndDownloadCsv";
 import UploadCsv from "./UploadCsv";
-import { fetchReceipt, handleFileUpload as handleReceiptUpload, updateReceipt } from "../../utils/receiptApi";
+import { fetchReceipt, handleFileUpload as handleReceiptUpload } from "../../utils/receiptApi";
 import DateRangeFilter from "../../components/DateRangeFilter";
 import { filterTransactionsByDate } from "../../utils/dateFilter";
 import TransactionTypeFilter from "../../components/TransactionTypeFilter";
@@ -99,9 +98,6 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
   const [gstVatPercentage, setGstVatPercentage] = useState("");
   const [isExtractingReceipt, setIsExtractingReceipt] = useState(false);
   const [editingReceipt, setEditingReceipt] = useState(null);
-  const [isUpdatingReceipt, setIsUpdatingReceipt] = useState(false);
-  const [newReceiptFile, setNewReceiptFile] = useState(null);
-  const [newReceiptPreview, setNewReceiptPreview] = useState(null);
 
   // Initialize userRole once when component mounts
   useEffect(() => {
@@ -738,51 +734,6 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
     setCurrentPage(1);
     localStorage.setItem('transactionsCurrentPage', '1');
   }, [selectedUserId]);
-
-  const handleReceiptUpdate = async () => {
-    if (!newReceiptFile) {
-      toast.warning("Please select a new receipt file");
-      return;
-    }
-
-    try {
-      setIsUpdatingReceipt(true);
-      // Use the updateReceipt utility function
-      await toast.promise(
-        updateReceipt(editingId, newReceiptFile),
-        {
-          pending: "Updating receipt...",
-          success: "Receipt updated successfully",
-          error: "Failed to update receipt",
-        }
-      );
-
-      // Refresh the receipt preview
-      const base64Image = await fetchReceipt(editingId, navigate);
-      if (base64Image && typeof base64Image === 'string' && base64Image.trim() !== '') {
-        setEditingReceipt(`data:image/jpeg;base64,${base64Image}`);
-      }
-      setNewReceiptFile(null);
-      setNewReceiptPreview(null);
-    } catch (error) {
-      console.error("Error updating receipt:", error);
-      toast.error(error.message || "Failed to update receipt");
-    } finally {
-      setIsUpdatingReceipt(false);
-    }
-  };
-
-  const handleNewReceiptFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setNewReceiptFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setNewReceiptPreview(reader.result);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
 
   if (loading) {
     return (
@@ -1672,14 +1623,48 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
                 </div>
               </div>
 
-              {editingId && (
+              {!editingId ? (
                 <div className="flex-1 border-l pl-6">
                   <div className="bg-gray-50 rounded-lg p-6 border border-gray-200">
-                    <div className="flex justify-between items-center mb-4">
-                      <h4 className="font-medium text-gray-900 flex items-center gap-2">
+                    <h4 className="font-medium text-gray-900 mb-4 flex items-center gap-2">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-5 w-5 text-blue-600"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                        <polyline points="14 2 14 8 20 8" />
+                        <line x1="16" y1="13" x2="8" y2="13" />
+                        <line x1="16" y1="17" x2="8" y2="17" />
+                        <polyline points="10 9 9 9 8 9" />
+                      </svg>
+                      Receipt Management
+                    </h4>
+                    <div className="flex gap-3 mb-6">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const input = document.createElement('input');
+                          input.type = 'file';
+                          input.accept = 'image/*,.pdf';
+                          input.onchange = (e) => {
+                            const files = e.target.files;
+                            if (files.length > 0) {
+                              setFiles(Array.from(files));
+                            }
+                          };
+                          input.click();
+                        }}
+                        className="flex-1 px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 shadow-sm"
+                      >
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
-                          className="h-5 w-5 text-blue-600"
+                          className="h-4 w-4"
                           viewBox="0 0 24 24"
                           fill="none"
                           stroke="currentColor"
@@ -1687,137 +1672,104 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
                           strokeLinecap="round"
                           strokeLinejoin="round"
                         >
-                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                          <polyline points="14 2 14 8 20 8" />
-                          <line x1="16" y1="13" x2="8" y2="13" />
-                          <line x1="16" y1="17" x2="8" y2="17" />
-                          <polyline points="10 9 9 9 8 9" />
+                          <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+                          <polyline points="17 8 12 3 7 8" />
+                          <line x1="12" y1="3" x2="12" y2="15" />
                         </svg>
-                        Receipt Management
-                      </h4>
+                        Upload Receipt
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const input = document.createElement('input');
+                          input.type = 'file';
+                          input.accept = 'image/*,.pdf';
+                          input.onchange = (e) => {
+                            const files = e.target.files;
+                            if (files.length > 0) {
+                              handleFileUpload({ target: { files } });
+                            }
+                          };
+                          input.click();
+                        }}
+                        className="flex-1 px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-all duration-300 flex items-center justify-center gap-2 shadow-sm"
+                      >
+                        Extract Receipt Data
+                        <span className="text-xs bg-gradient-to-r from-yellow-100 to-yellow-50 text-yellow-800 px-3 py-1.5 rounded-full ml-1.5 font-semibold border border-yellow-200 shadow-sm flex items-center gap-2 group/badge hover:from-yellow-200 hover:to-yellow-100 transition-all duration-300">
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="h-4 w-4 text-yellow-500 group-hover/badge:text-yellow-600 transition-colors"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                          </svg>
+                          <span className="relative">
+                            AI
+                            <span className="absolute -bottom-0.5 left-0 w-full h-0.5 bg-yellow-300 scale-x-0 group-hover/badge:scale-x-100 transition-transform duration-300"></span>
+                          </span>
+                        </span>
+                      </button>
                     </div>
-                    <div className="rounded-lg p-6 bg-white relative">
-                      {isUpdatingReceipt && (
+                    <div 
+                      className={`border-2 border-dashed border-gray-300 rounded-lg p-6 flex flex-col items-center justify-center h-64 bg-white relative ${
+                        isExtractingReceipt ? 'pointer-events-none' : ''
+                      }`}
+                    >
+                      {isExtractingReceipt && (
                         <div className="absolute inset-0 bg-white/90 flex items-center justify-center flex-col gap-3 z-10 rounded-lg">
                           <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500"></div>
-                          <p className="text-sm text-gray-600">Updating receipt...</p>
+                          <p className="text-sm text-gray-600">Extracting data from receipt...</p>
                         </div>
                       )}
-                      {newReceiptPreview ? (
-                        <div className="space-y-4">
-                          <div>
-                            <h5 className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                className="h-4 w-4 text-blue-500"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                              >
-                                <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
-                                <polyline points="14 2 14 8 20 8" />
-                              </svg>
-                              New Receipt Preview
-                            </h5>
-                            <div className="relative">
-                              <img
-                                src={newReceiptPreview}
-                                alt="New Receipt Preview"
-                                className="w-full h-[calc(100vh-450px)] min-h-[350px] object-contain rounded-lg shadow-sm"
-                              />
-                            </div>
-                          </div>
-                          <div className="flex justify-end gap-3 pt-4">
-                            <button
-                              onClick={() => {
-                                setNewReceiptFile(null);
-                                setNewReceiptPreview(null);
-                              }}
-                              className="px-4 py-2.5 text-gray-700 bg-white rounded-lg hover:bg-gray-50 transition-all duration-300 flex items-center gap-2 shadow-sm"
-                            >
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                className="h-4 w-4"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                              >
-                                <line x1="18" y1="6" x2="6" y2="18" />
-                                <line x1="6" y1="6" x2="18" y2="18" />
-                              </svg>
-                              Cancel
-                            </button>
-                            <button
-                              onClick={handleReceiptUpdate}
-                              disabled={isUpdatingReceipt}
-                              className={`px-4 py-2.5 bg-blue-600 text-white rounded-lg transition-all duration-300 flex items-center gap-2 shadow-sm ${
-                                isUpdatingReceipt 
-                                  ? "opacity-50 cursor-not-allowed" 
-                                  : "hover:bg-blue-700 hover:shadow-md"
-                              }`}
-                            >
-                              {isUpdatingReceipt ? (
-                                <>
-                                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                                  Updating...
-                                </>
-                              ) : (
-                                <>
-                                  <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    className="h-4 w-4"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    strokeWidth="2"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                  >
-                                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
-                                    <polyline points="17 21 17 13 7 13 7 21" />
-                                    <polyline points="7 3 7 8 15 8" />
-                                  </svg>
-                                  Save Receipt
-                                </>
-                              )}
-                            </button>
-                          </div>
-                        </div>
-                      ) : editingReceipt ? (
-                        <div className="space-y-4">
-                          <div className="relative">
-                            <img
-                              src={editingReceipt}
-                              alt="Current Receipt"
-                              className="w-full h-[calc(100vh-450px)] min-h-[350px] object-contain rounded-lg shadow-sm"
-                            />
-                          </div>
-                          <div className="flex justify-end gap-3 pt-4">
-                            <label className="px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all duration-300 cursor-pointer flex items-center gap-2 shadow-sm">
-                              <Upload className="w-4 h-4" />
-                              Update Receipt
-                              <input
-                                type="file"
-                                accept="image/*,.pdf"
-                                className="hidden"
-                                onChange={handleNewReceiptFileChange}
-                                disabled={isUpdatingReceipt}
-                              />
-                            </label>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="flex flex-col items-center justify-center h-[calc(100vh-450px)] min-h-[350px] text-gray-500">
-                          <div className="w-20 h-20 mb-4 text-blue-500 flex items-center justify-center rounded-full bg-blue-50">
+                      {files.length > 0 ? (
+                        <div className="w-full h-full flex flex-col items-center justify-center">
+                          <div className="w-16 h-16 mb-4 text-blue-500 flex items-center justify-center rounded-full bg-blue-50">
                             <svg
                               xmlns="http://www.w3.org/2000/svg"
-                              className="h-10 w-10"
+                              className="h-8 w-8"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
+                              <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                          </div>
+                          <p className="text-sm font-medium text-gray-700 mb-2">
+                            {files.length} file{files.length > 1 ? 's' : ''} selected
+                          </p>
+                          <button
+                            onClick={() => setFiles([])}
+                            className="text-sm text-red-600 hover:text-red-700 flex items-center gap-1"
+                          >
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="h-4 w-4"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
+                              <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
+                            </svg>
+                            Remove
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="w-16 h-16 mb-4 text-blue-500 flex items-center justify-center rounded-full bg-blue-50">
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="h-8 w-8"
                               viewBox="0 0 24 24"
                               fill="none"
                               stroke="currentColor"
@@ -1828,30 +1780,30 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
                               <path d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
                             </svg>
                           </div>
-                          <p className="text-lg font-medium text-gray-700 mb-2">No receipt available</p>
-                          <p className="text-sm text-gray-500 text-center max-w-[300px]">
-                            Click the "Add Receipt" button below to upload a receipt image or PDF
+                          <p className="mb-2 text-sm font-medium text-gray-700">No receipt selected</p>
+                          <p className="text-xs text-gray-500 text-center max-w-[200px]">
+                            Select a receipt using the buttons above to upload or extract data
                           </p>
-                          <p className="text-xs text-gray-400 mt-4">
-                            Supported formats: JPG, PNG, PDF
-                          </p>
-                          <label className="mt-6 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all duration-300 cursor-pointer flex items-center gap-2 shadow-sm">
-                            <Upload className="w-4 h-4" />
-                            Add Receipt
-                            <input
-                              type="file"
-                              accept="image/*,.pdf"
-                              className="hidden"
-                              onChange={handleNewReceiptFileChange}
-                              disabled={isUpdatingReceipt}
-                            />
-                          </label>
-                        </div>
+                        </>
                       )}
                     </div>
+                    <p className="text-xs text-gray-500 mt-3 text-center">
+                      Supported formats: JPG, PNG, PDF
+                    </p>
                   </div>
                 </div>
-              )}
+              ) : editingReceipt ? (
+                <div className="flex-1 border-l pl-6">
+                  <h4 className="font-medium text-gray-700 mb-3">Current Receipt</h4>
+                  <div className="border border-gray-200 rounded-lg p-4 bg-white">
+                    <img
+                      src={editingReceipt}
+                      alt="Current Receipt"
+                      className="w-full h-[calc(100vh-400px)] min-h-[400px] object-contain"
+                    />
+                  </div>
+                </div>
+              ) : null}
             </form>
 
             <div className="flex justify-end gap-2 mt-6">
