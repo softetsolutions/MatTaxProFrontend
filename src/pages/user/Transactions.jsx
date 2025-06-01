@@ -502,8 +502,8 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
         error: "Got Error Deleting transaction, Try again 🤯",
       });
       setRefreshTableList((prev) => !prev);
-    } catch (e) {
-      console.error(e);
+    } catch (err) {
+      console.error(err);
     }
   };
 
@@ -1768,7 +1768,9 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
                                   error: "Failed to update receipt 🤯",
                                 }
                               );
-                            } catch (e) {}
+                            } catch (err) {
+                              console.error(err);
+                            }
                             setIsUpdatingReceipt(false);
                           }}
                         >
@@ -1832,7 +1834,9 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
                               error: "Failed to update receipt 🤯",
                             }
                           );
-                        } catch (e) {}
+                        } catch (err) {
+                          console.error(err);
+                        }
                         setIsUpdatingReceipt(false);
                       }}
                     >
