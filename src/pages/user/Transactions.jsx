@@ -25,7 +25,7 @@ import { fetchAllCategories, updateCategory, createCategory } from "../../utils/
 import { fetchAllAccounts, updateAccount, createAccount } from "../../utils/accountApi";
 import { downloadCSV } from "../../utils/convertAndDownloadCsv";
 import UploadCsv from "./UploadCsv";
-import { fetchReceipt, handleFileUpload as handleReceiptUpload } from "../../utils/receiptApi";
+import { fetchReceipt, handleFileUpload as handleReceiptUpload, updateReceipt } from "../../utils/receiptApi";
 import DateRangeFilter from "../../components/DateRangeFilter";
 import { filterTransactionsByDate } from "../../utils/dateFilter";
 import TransactionTypeFilter from "../../components/TransactionTypeFilter";
@@ -98,6 +98,7 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
   const [gstVatPercentage, setGstVatPercentage] = useState("");
   const [isExtractingReceipt, setIsExtractingReceipt] = useState(false);
   const [editingReceipt, setEditingReceipt] = useState(null);
+  const [isUpdatingReceipt, setIsUpdatingReceipt] = useState(false);
 
   // Initialize userRole once when component mounts
   useEffect(() => {
@@ -1726,65 +1727,53 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
                           <p className="text-sm text-gray-600">Extracting data from receipt...</p>
                         </div>
                       )}
-                      {files.length > 0 ? (
-                        <div className="w-full h-full flex flex-col items-center justify-center">
-                          <div className="w-16 h-16 mb-4 text-blue-500 flex items-center justify-center rounded-full bg-blue-50">
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              className="h-8 w-8"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            >
-                              <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                            </svg>
-                          </div>
-                          <p className="text-sm font-medium text-gray-700 mb-2">
-                            {files.length} file{files.length > 1 ? 's' : ''} selected
-                          </p>
+                      {files.length > 0 && files[0].type.startsWith('image') && !editingId ? (
+                        <div className="border border-gray-200 rounded-lg p-4 bg-white mb-4 flex items-center justify-between">
+                          <span className="text-gray-700 text-sm">{files[0].name}</span>
                           <button
+                            type="button"
                             onClick={() => setFiles([])}
-                            className="text-sm text-red-600 hover:text-red-700 flex items-center gap-1"
+                            className="ml-4 px-2 py-1 text-red-600 border border-red-300 rounded hover:bg-red-100 text-xs"
                           >
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              className="h-4 w-4"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            >
-                              <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
-                            </svg>
                             Remove
                           </button>
                         </div>
                       ) : (
-                        <>
-                          <div className="w-16 h-16 mb-4 text-blue-500 flex items-center justify-center rounded-full bg-blue-50">
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              className="h-8 w-8"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            >
-                              <path d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
-                            </svg>
-                          </div>
-                          <p className="mb-2 text-sm font-medium text-gray-700">No receipt selected</p>
-                          <p className="text-xs text-gray-500 text-center max-w-[200px]">
-                            Select a receipt using the buttons above to upload or extract data
-                          </p>
-                        </>
+                        <div className="border border-gray-200 rounded-lg p-4 bg-white mb-4">
+                          {editingReceipt ? (
+                            <img
+                              src={editingReceipt}
+                              alt="Current Receipt"
+                              className="w-full h-[calc(100vh-400px)] min-h-[400px] object-contain"
+                            />
+                          ) : (
+                            <div className="text-gray-400 text-center py-12">No receipt selected</div>
+                          )}
+                        </div>
+                      )}
+                      {editingId && (
+                        <button
+                          type="button"
+                          className={`mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors ${isUpdatingReceipt || files.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                          disabled={isUpdatingReceipt || files.length === 0}
+                          onClick={async () => {
+                            if (!editingId || files.length === 0) return;
+                            setIsUpdatingReceipt(true);
+                            try {
+                              await toast.promise(
+                                updateReceipt(editingId, files[0]),
+                                {
+                                  pending: "Updating receipt...",
+                                  success: "Receipt updated successfully 👌",
+                                  error: "Failed to update receipt 🤯",
+                                }
+                              );
+                            } catch (e) {}
+                            setIsUpdatingReceipt(false);
+                          }}
+                        >
+                          {isUpdatingReceipt ? 'Updating...' : 'Update Receipt'}
+                        </button>
                       )}
                     </div>
                     <p className="text-xs text-gray-500 mt-3 text-center">
@@ -1795,13 +1784,61 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
               ) : editingReceipt ? (
                 <div className="flex-1 border-l pl-6">
                   <h4 className="font-medium text-gray-700 mb-3">Current Receipt</h4>
-                  <div className="border border-gray-200 rounded-lg p-4 bg-white">
-                    <img
-                      src={editingReceipt}
-                      alt="Current Receipt"
-                      className="w-full h-[calc(100vh-400px)] min-h-[400px] object-contain"
+                  <div className="mb-4">
+                    <label className="block text-gray-700 text-sm font-bold mb-2">Update Receipt</label>
+                    <input
+                      type="file"
+                      accept="image/*,.pdf"
+                      onChange={e => setFiles(Array.from(e.target.files))}
+                      className="block w-full text-sm text-gray-700 border border-gray-300 rounded p-2"
                     />
                   </div>
+                  {files.length > 0 && files[0].type.startsWith('image') ? (
+                    <div className="border border-gray-200 rounded-lg p-4 bg-white mb-4">
+                      <div className="text-xs text-gray-600 mb-2">New Preview:</div>
+                      <img
+                        src={URL.createObjectURL(files[0])}
+                        alt="New Receipt Preview"
+                        className="w-full h-[calc(100vh-400px)] min-h-[400px] object-contain"
+                      />
+                    </div>
+                  ) : (
+                    <div className="border border-gray-200 rounded-lg p-4 bg-white mb-4">
+                      {editingReceipt ? (
+                        <img
+                          src={editingReceipt}
+                          alt="Current Receipt"
+                          className="w-full h-[calc(100vh-400px)] min-h-[400px] object-contain"
+                        />
+                      ) : (
+                        <div className="text-gray-400 text-center py-12">No receipt selected</div>
+                      )}
+                    </div>
+                  )}
+                  {editingId && (
+                    <button
+                      type="button"
+                      className={`mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors ${isUpdatingReceipt || files.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      disabled={isUpdatingReceipt || files.length === 0}
+                      onClick={async () => {
+                        if (!editingId || files.length === 0) return;
+                        setIsUpdatingReceipt(true);
+                        try {
+                          await toast.promise(
+                            updateReceipt(editingId, files[0]),
+                            {
+                              pending: "Updating receipt...",
+                              success: "Receipt updated successfully 👌",
+                              error: "Failed to update receipt 🤯",
+                            }
+                          );
+                        } catch (e) {}
+                        setIsUpdatingReceipt(false);
+                      }}
+                    >
+                      {isUpdatingReceipt ? 'Updating...' : 'Update Receipt'}
+                    </button>
+                  )}
                 </div>
               ) : null}
             </form>

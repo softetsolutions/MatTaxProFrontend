@@ -107,3 +107,27 @@ export const handleFileUpload = async (file, vendorOptions, categoryOptions) => 
     throw error;
   }
 };
+
+export const updateReceipt = async (receiptId, file) => {
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await fetch(`${import.meta.env.VITE_BASE_URL}/receipt/${receiptId}`, {
+      method: 'PUT',
+      credentials: 'include',
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Failed to update receipt');
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error updating receipt:', error);
+    throw error;
+  }
+};
