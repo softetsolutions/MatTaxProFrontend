@@ -1643,13 +1643,51 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
                 </div>
               </div>
 
-              {!editingId ? (
-                <div className="flex-1 border-l pl-6">
-                  <div className="bg-gray-50 rounded-lg p-6 border border-gray-200">
-                    <h4 className="font-medium text-gray-900 mb-4 flex items-center gap-2">
+              <div className="flex-1 border-l pl-6">
+                <div className="bg-gray-50 rounded-lg p-6 border border-gray-200">
+                  <h4 className="font-medium text-gray-900 mb-4 flex items-center gap-2">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-5 w-5 text-blue-600"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                      <polyline points="14 2 14 8 20 8" />
+                      <line x1="16" y1="13" x2="8" y2="13" />
+                      <line x1="16" y1="17" x2="8" y2="17" />
+                      <polyline points="10 9 9 9 8 9" />
+                    </svg>
+                    Receipt Management
+                  </h4>
+                  <div className="flex gap-3 mb-6">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const input = document.createElement('input');
+                        input.type = 'file';
+                        input.accept = 'image/*,.pdf';
+                        input.onchange = (e) => {
+                          const files = e.target.files;
+                          if (files.length > 0) {
+                            setFiles(Array.from(files));
+                            if (files[0].type.startsWith('image/')) {
+                              const previewUrl = URL.createObjectURL(files[0]);
+                              setEditingReceipt(previewUrl);
+                            }
+                          }
+                        };
+                        input.click();
+                      }}
+                      className="flex-1 px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 shadow-sm"
+                    >
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
-                        className="h-5 w-5 text-blue-600"
+                        className="h-4 w-4"
                         viewBox="0 0 24 24"
                         fill="none"
                         stroke="currentColor"
@@ -1657,38 +1695,43 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
                         strokeLinecap="round"
                         strokeLinejoin="round"
                       >
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                        <polyline points="14 2 14 8 20 8" />
-                        <line x1="16" y1="13" x2="8" y2="13" />
-                        <line x1="16" y1="17" x2="8" y2="17" />
-                        <polyline points="10 9 9 9 8 9" />
+                        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+                        <polyline points="17 8 12 3 7 8" />
+                        <line x1="12" y1="3" x2="12" y2="15" />
                       </svg>
-                      Receipt Management
-                    </h4>
-                    <div className="flex gap-3 mb-6">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const input = document.createElement('input');
-                          input.type = 'file';
-                          input.accept = 'image/*,.pdf';
-                          input.onchange = (e) => {
-                            const files = e.target.files;
-                            if (files.length > 0) {
-                              setFiles(Array.from(files));
-                              if (files[0].type.startsWith('image/')) {
-                                const previewUrl = URL.createObjectURL(files[0]);
-                                setEditingReceipt(previewUrl);
-                              }
-                            }
-                          };
-                          input.click();
-                        }}
-                        className="flex-1 px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 shadow-sm"
-                      >
+                      Upload Receipt
+                    </button>
+                    <button
+                      type="button"
+                      disabled={files.length === 0 && !editingReceipt}
+                      onClick={() => {
+                        if (files.length > 0) {
+                          handleFileUpload({ target: { files } });
+                        } else if (editingReceipt) {
+                          // Create a File object from the base64 image
+                          fetch(editingReceipt)
+                            .then(res => res.blob())
+                            .then(blob => {
+                              const file = new File([blob], "receipt.jpg", { type: "image/jpeg" });
+                              handleFileUpload({ target: { files: [file] } });
+                            })
+                            .catch(err => {
+                              console.error("Error converting receipt to file:", err);
+                              toast.error("Failed to process receipt for extraction");
+                            });
+                        }
+                      }}
+                      className={`flex-1 px-4 py-2.5 text-white text-sm font-medium rounded-lg transition-all duration-300 flex items-center justify-center gap-2 shadow-sm ${
+                        files.length === 0 && !editingReceipt
+                          ? 'bg-blue-200 cursor-not-allowed'
+                          : 'bg-blue-600 hover:bg-blue-700'
+                      }`}
+                    >
+                      Extract Receipt Data
+                      <span className="text-xs bg-gradient-to-r from-yellow-100 to-yellow-50 text-yellow-800 px-3 py-1.5 rounded-full ml-1.5 font-semibold border border-yellow-200 shadow-sm flex items-center gap-2 group/badge hover:from-yellow-200 hover:to-yellow-100 transition-all duration-300">
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
-                          className="h-4 w-4"
+                          className="h-4 w-4 text-yellow-500 group-hover/badge:text-yellow-600 transition-colors"
                           viewBox="0 0 24 24"
                           fill="none"
                           stroke="currentColor"
@@ -1696,151 +1739,59 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
                           strokeLinecap="round"
                           strokeLinejoin="round"
                         >
-                          <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
-                          <polyline points="17 8 12 3 7 8" />
-                          <line x1="12" y1="3" x2="12" y2="15" />
+                          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
                         </svg>
-                        Upload Receipt
-                      </button>
-                      <button
-                        type="button"
-                        disabled={files.length === 0}
-                        onClick={() => {
-                          if (files.length > 0) {
-                            handleFileUpload({ target: { files } });
-                          }
-                        }}
-                        className={`flex-1 px-4 py-2.5 text-white text-sm font-medium rounded-lg transition-all duration-300 flex items-center justify-center gap-2 shadow-sm ${
-                          files.length === 0
-                            ? 'bg-blue-200 cursor-not-allowed'
-                            : 'bg-blue-600 hover:bg-blue-700'
-                        }`}
-                      >
-                        Extract Receipt Data
-                        <span className="text-xs bg-gradient-to-r from-yellow-100 to-yellow-50 text-yellow-800 px-3 py-1.5 rounded-full ml-1.5 font-semibold border border-yellow-200 shadow-sm flex items-center gap-2 group/badge hover:from-yellow-200 hover:to-yellow-100 transition-all duration-300">
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            className="h-4 w-4 text-yellow-500 group-hover/badge:text-yellow-600 transition-colors"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          >
-                            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                          </svg>
-                          <span className="relative">
-                            AI
-                            <span className="absolute -bottom-0.5 left-0 w-full h-0.5 bg-yellow-300 scale-x-0 group-hover/badge:scale-x-100 transition-transform duration-300"></span>
-                          </span>
+                        <span className="relative">
+                          AI
+                          <span className="absolute -bottom-0.5 left-0 w-full h-0.5 bg-yellow-300 scale-x-0 group-hover/badge:scale-x-100 transition-transform duration-300"></span>
                         </span>
-                      </button>
-                    </div>
-                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 flex flex-col items-center justify-start h-80 bg-white relative overflow-hidden mb-4">
-                      {isExtractingReceipt && (
-                        <div className="absolute inset-0 bg-white/90 flex items-center justify-center flex-col gap-3 z-10 rounded-lg">
-                          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500"></div>
-                          <p className="text-sm text-gray-600">Extracting data from receipt...</p>
-                        </div>
-                      )}
-                      {files.length > 0 && files[0].type.startsWith('image/') ? (
-                        <>
-                          <div className="w-full flex items-center justify-between mb-2">
-                            <span className="text-gray-700 text-sm truncate">{files[0].name}</span>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setFiles([]);
-                                if (editingReceipt && editingReceipt.startsWith('blob:')) {
-                                  URL.revokeObjectURL(editingReceipt);
-                                }
-                                setEditingReceipt(null);
-                              }}
-                              className="px-2 py-1 text-red-600 border border-red-300 rounded hover:bg-red-100 text-xs"
-                            >
-                              Remove
-                            </button>
-                          </div>
-                          <div className="flex-1 w-full flex items-center justify-center">
-                            <img
-                              src={editingReceipt}
-                              alt="Receipt Preview"
-                              className="max-h-56 max-w-full object-contain"
-                            />
-                          </div>
-                        </>
-                      ) : (
-                        <div className="text-gray-400 text-center py-12 w-full">No receipt selected</div>
-                      )}
-                    </div>
-                    <p className="text-xs text-gray-500 mt-3 text-center">
-                      Supported formats: JPG, PNG, PDF
-                    </p>
-                  </div>
-                </div>
-              ) : editingReceipt ? (
-                <div className="flex-1 border-l pl-6">
-                  <h4 className="font-medium text-gray-700 mb-3">Current Receipt</h4>
-                  <div className="mb-4">
-                    <label className="block text-gray-700 text-sm font-bold mb-2">Update Receipt</label>
-                    <input
-                      type="file"
-                      accept="image/*,.pdf"
-                      onChange={e => setFiles(Array.from(e.target.files))}
-                      className="block w-full text-sm text-gray-700 border border-gray-300 rounded p-2"
-                    />
-                  </div>
-                  {files.length > 0 && files[0].type.startsWith('image') ? (
-                    <div className="border border-gray-200 rounded-lg p-4 bg-white mb-4">
-                      <div className="text-xs text-gray-600 mb-2">New Preview:</div>
-                      <img
-                        src={URL.createObjectURL(files[0])}
-                        alt="New Receipt Preview"
-                        className="w-full h-[calc(100vh-400px)] min-h-[400px] object-contain"
-                      />
-                    </div>
-                  ) : (
-                    <div className="border border-gray-200 rounded-lg p-4 bg-white mb-4">
-                      {editingReceipt ? (
-                        <img
-                          src={editingReceipt}
-                          alt="Current Receipt"
-                          className="w-full h-[calc(100vh-400px)] min-h-[400px] object-contain"
-                        />
-                      ) : (
-                        <div className="text-gray-400 text-center py-12">No receipt selected</div>
-                      )}
-                    </div>
-                  )}
-                  {editingId && (
-                    <button
-                      type="button"
-                      className={`mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors ${isUpdatingReceipt || files.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
-                      disabled={isUpdatingReceipt || files.length === 0}
-                      onClick={async () => {
-                        if (!editingId || files.length === 0) return;
-                        setIsUpdatingReceipt(true);
-                        try {
-                          await toast.promise(
-                            updateReceipt(editingId, files[0]),
-                            {
-                              pending: "Updating receipt...",
-                              success: "Receipt updated successfully 👌",
-                              error: "Failed to update receipt 🤯",
-                            }
-                          );
-                        } catch (err) {
-                          console.error(err);
-                        }
-                        setIsUpdatingReceipt(false);
-                      }}
-                    >
-                      {isUpdatingReceipt ? 'Updating...' : 'Update Receipt'}
+                      </span>
                     </button>
-                  )}
+                  </div>
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 flex flex-col items-center justify-start h-80 bg-white relative overflow-hidden mb-4">
+                    {isExtractingReceipt && (
+                      <div className="absolute inset-0 bg-white/90 flex items-center justify-center flex-col gap-3 z-10 rounded-lg">
+                        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500"></div>
+                        <p className="text-sm text-gray-600">Extracting data from receipt...</p>
+                      </div>
+                    )}
+                    {(files.length > 0 || editingReceipt) ? (
+                      <>
+                        <div className="w-full flex items-center justify-between mb-2">
+                          <span className="text-gray-700 text-sm truncate">
+                            {files.length > 0 ? files[0].name : "Current Receipt"}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setFiles([]);
+                              if (editingReceipt && editingReceipt.startsWith('blob:')) {
+                                URL.revokeObjectURL(editingReceipt);
+                              }
+                              setEditingReceipt(null);
+                            }}
+                            className="px-2 py-1 text-red-600 border border-red-300 rounded hover:bg-red-100 text-xs"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                        <div className="flex-1 w-full flex items-center justify-center">
+                          <img
+                            src={files.length > 0 ? URL.createObjectURL(files[0]) : editingReceipt}
+                            alt="Receipt Preview"
+                            className="max-h-56 max-w-full object-contain"
+                          />
+                        </div>
+                      </>
+                    ) : (
+                      <div className="text-gray-400 text-center py-12 w-full">No receipt selected</div>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-500 mt-3 text-center">
+                    Supported formats: JPG, PNG, PDF
+                  </p>
                 </div>
-              ) : null}
+              </div>
             </form>
 
             <div className="flex justify-end gap-2 mt-6">
