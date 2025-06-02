@@ -95,7 +95,7 @@ export default function LoginPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
-    
+
     if (!recaptchaToken) {
       setError("Please complete the reCAPTCHA verification.");
       return;
@@ -104,23 +104,20 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      let user = await fetch(
-        `${import.meta.env.VITE_BASE_URL}/auth/login`,
-        {
-          method: "POST",
-          credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            email: email,
-            password: password,
-            recaptchaToken: recaptchaToken,
-          }),
-        }
-      );
+      let user = await fetch(`${import.meta.env.VITE_BASE_URL}/auth/login`, {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: email,
+          password: password,
+          recaptchaToken: recaptchaToken,
+        }),
+      });
 
-      if(user.status !== 200){
+      if (user.status !== 200) {
         const errorData = await user.json();
         throw new Error(errorData.message || "Error logging in");
       }
@@ -128,8 +125,8 @@ export default function LoginPage() {
       localStorage.setItem("userToken", user.data);
       toast.success("Wohha logged in successfully!");
       navigate("/dashboard");
-    } catch (e) {      
-      console.error("Error message:", e.message);   
+    } catch (e) {
+      console.error("Error message:", e.message);
       setError(e.message);
       if (recaptchaRef.current) {
         recaptchaRef.current.reset();
@@ -141,7 +138,7 @@ export default function LoginPage() {
   };
 
   const handleSocialLogin = async (provider) => {
-    console.log("provider",provider)
+    if (provider !== "google") return;
     setSocialLoginLoading((prev) => ({ ...prev, [provider]: true }));
     // setError("");
 
@@ -150,8 +147,7 @@ export default function LoginPage() {
       //   `${import.meta.env.VITE_BASE_URL}/auth/google`
       // );
       // navigate(`${import.meta.env.VITE_BASE_URL}/auth/google`);
-      window.location.href =`${import.meta.env.VITE_BASE_URL}/auth/google`
-      
+      window.location.href = `${import.meta.env.VITE_BASE_URL}/auth/google`;
     } catch {
       setError(`Failed to login with ${provider}. Please try again.`);
     } finally {
@@ -315,16 +311,22 @@ export default function LoginPage() {
                 </div>
 
                 <div className="mt-6 grid grid-cols-3 gap-3">
-                  {socialProviders.map(({ name, icon }) => (
-                    <button
-                      key={name}
-                      onClick={() => handleSocialLogin(name)}
-                      disabled={socialLoginLoading[name]}
-                      className="w-full flex items-center justify-center p-3 bg-zinc-800 rounded-lg border border-zinc-700 hover:bg-zinc-700 transition-all hover:cursor-pointer"
-                    >
-                      {socialLoginLoading[name] ? spinner : icon}
-                    </button>
-                  ))}
+                  {socialProviders.map(({ name, icon }) => {
+                    return (
+                      <button
+                        key={name}
+                        onClick={() => handleSocialLogin(name)}
+                        disabled={name !== "google"}
+                        className={`${
+                          name === "google"
+                            ? "w-full flex items-center justify-center p-3 bg-zinc-800 rounded-lg border border-zinc-700 hover:bg-zinc-700 transition-all hover:cursor-pointer"
+                            : "w-full flex items-center justify-center p-3 bg-zinc-800 rounded-lg border border-zinc-700 transition-all hover:cursor-not-allowed"
+                        }`}
+                      >
+                        {socialLoginLoading[name] ? spinner : icon}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
