@@ -480,15 +480,19 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
       setShowModal(true);
 
       // Try to fetch receipt if it exists
-      try {
-        const base64Image = await fetchReceipt(id, navigate);
-        if (base64Image && typeof base64Image === 'string' && base64Image.trim() !== '') {
-          setEditingReceipt(`data:image/jpeg;base64,${base64Image}`);
-        } else {
+      if (transactionToEdit.receipt) {
+        try {
+          const base64Image = await fetchReceipt(transactionToEdit.receipt, navigate);
+          if (base64Image && typeof base64Image === 'string' && base64Image.trim() !== '') {
+            setEditingReceipt(`data:image/jpeg;base64,${base64Image}`);
+          } else {
+            setEditingReceipt(null);
+          }
+        } catch (error) {
+          console.error("Error fetching receipt:", error);
           setEditingReceipt(null);
         }
-      } catch (error) {
-        console.error("Error fetching receipt:", error);
+      } else {
         setEditingReceipt(null);
       }
     }
@@ -1000,7 +1004,7 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
                               <Edit className="w-4 h-4" />
                             </button>
                             <button
-                              onClick={() => handleViewReceipt(txn.id)}
+                              onClick={() => handleViewReceipt(txn.receipt)}
                               className="p-1 text-teal-600 hover:text-teal-800 rounded hover:bg-teal-50"
                               title="View Receipt"
                             >
