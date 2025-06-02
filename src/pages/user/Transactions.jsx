@@ -686,6 +686,12 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
 
     setFiles(uploadedFiles);
     
+    // preview for the uploaded image
+    if (uploadedFiles[0].type.startsWith('image/')) {
+      const previewUrl = URL.createObjectURL(uploadedFiles[0]);
+      setEditingReceipt(previewUrl);
+    }
+    
     try {
       setIsExtractingReceipt(true);
       const result = await handleReceiptUpload(
@@ -739,6 +745,15 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
     setCurrentPage(1);
     localStorage.setItem('transactionsCurrentPage', '1');
   }, [selectedUserId]);
+
+  // remove image preview
+  useEffect(() => {
+    return () => {
+      if (editingReceipt && editingReceipt.startsWith('blob:')) {
+        URL.revokeObjectURL(editingReceipt);
+      }
+    };
+  }, [editingReceipt]);
 
   if (loading) {
     return (
@@ -1661,6 +1676,10 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
                             const files = e.target.files;
                             if (files.length > 0) {
                               setFiles(Array.from(files));
+                              if (files[0].type.startsWith('image/')) {
+                                const previewUrl = URL.createObjectURL(files[0]);
+                                setEditingReceipt(previewUrl);
+                              }
                             }
                           };
                           input.click();
@@ -1720,66 +1739,41 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
                         </span>
                       </button>
                     </div>
-                    <div 
-                      className={`border-2 border-dashed border-gray-300 rounded-lg p-6 flex flex-col items-center justify-center h-64 bg-white relative ${
-                        isExtractingReceipt ? 'pointer-events-none' : ''
-                      }`}
-                    >
+                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 flex flex-col items-center justify-start h-80 bg-white relative overflow-hidden mb-4">
                       {isExtractingReceipt && (
                         <div className="absolute inset-0 bg-white/90 flex items-center justify-center flex-col gap-3 z-10 rounded-lg">
                           <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500"></div>
                           <p className="text-sm text-gray-600">Extracting data from receipt...</p>
                         </div>
                       )}
-                      {files.length > 0 && files[0].type.startsWith('image') && !editingId ? (
-                        <div className="border border-gray-200 rounded-lg p-4 bg-white mb-4 flex items-center justify-between">
-                          <span className="text-gray-700 text-sm">{files[0].name}</span>
-                          <button
-                            type="button"
-                            onClick={() => setFiles([])}
-                            className="ml-4 px-2 py-1 text-red-600 border border-red-300 rounded hover:bg-red-100 text-xs"
-                          >
-                            Remove
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="border border-gray-200 rounded-lg p-4 bg-white mb-4">
-                          {editingReceipt ? (
+                      {files.length > 0 && files[0].type.startsWith('image/') ? (
+                        <>
+                          <div className="w-full flex items-center justify-between mb-2">
+                            <span className="text-gray-700 text-sm truncate">{files[0].name}</span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setFiles([]);
+                                if (editingReceipt && editingReceipt.startsWith('blob:')) {
+                                  URL.revokeObjectURL(editingReceipt);
+                                }
+                                setEditingReceipt(null);
+                              }}
+                              className="px-2 py-1 text-red-600 border border-red-300 rounded hover:bg-red-100 text-xs"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                          <div className="flex-1 w-full flex items-center justify-center">
                             <img
                               src={editingReceipt}
-                              alt="Current Receipt"
-                              className="w-full h-[calc(100vh-400px)] min-h-[400px] object-contain"
+                              alt="Receipt Preview"
+                              className="max-h-56 max-w-full object-contain"
                             />
-                          ) : (
-                            <div className="text-gray-400 text-center py-12">No receipt selected</div>
-                          )}
-                        </div>
-                      )}
-                      {editingId && (
-                        <button
-                          type="button"
-                          className={`mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors ${isUpdatingReceipt || files.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
-                          disabled={isUpdatingReceipt || files.length === 0}
-                          onClick={async () => {
-                            if (!editingId || files.length === 0) return;
-                            setIsUpdatingReceipt(true);
-                            try {
-                              await toast.promise(
-                                updateReceipt(editingId, files[0]),
-                                {
-                                  pending: "Updating receipt...",
-                                  success: "Receipt updated successfully 👌",
-                                  error: "Failed to update receipt 🤯",
-                                }
-                              );
-                            } catch (err) {
-                              console.error(err);
-                            }
-                            setIsUpdatingReceipt(false);
-                          }}
-                        >
-                          {isUpdatingReceipt ? 'Updating...' : 'Update Receipt'}
-                        </button>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="text-gray-400 text-center py-12 w-full">No receipt selected</div>
                       )}
                     </div>
                     <p className="text-xs text-gray-500 mt-3 text-center">
