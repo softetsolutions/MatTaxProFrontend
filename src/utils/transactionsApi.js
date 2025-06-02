@@ -94,7 +94,6 @@ export const createTransaction = async (transactionData, selectedUserId) => {
 };
 
 export const updateTransaction = async (
-  transactionId,
   transactionData,
   selectedUserId = null
 ) => {
@@ -115,13 +114,17 @@ export const updateTransaction = async (
       method: "POST",
       credentials: "include",
       headers: {
-        "Content-Type": "application/json",
+        ...(transactionData instanceof FormData
+          ? {}
+          : { "Content-Type": "application/json" }),
       },
-      body: JSON.stringify({
-        transactionId,
-        ...transactionData,
-        updatedByUserId: userId,
-      }),
+      body:
+        transactionData instanceof FormData
+          ? transactionData
+          : JSON.stringify({
+              ...transactionData,
+              updatedByUserId: userId,
+            }),
     });
 
     if (!response.ok) {

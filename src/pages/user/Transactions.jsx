@@ -25,7 +25,7 @@ import { fetchAllCategories, updateCategory, createCategory } from "../../utils/
 import { fetchAllAccounts, updateAccount, createAccount } from "../../utils/accountApi";
 import { downloadCSV } from "../../utils/convertAndDownloadCsv";
 import UploadCsv from "./UploadCsv";
-import { fetchReceipt, handleFileUpload as handleReceiptUpload, updateReceipt } from "../../utils/receiptApi";
+import { fetchReceipt, handleFileUpload as handleReceiptUpload } from "../../utils/receiptApi";
 import DateRangeFilter from "../../components/DateRangeFilter";
 import { filterTransactionsByDate } from "../../utils/dateFilter";
 import TransactionTypeFilter from "../../components/TransactionTypeFilter";
@@ -98,7 +98,6 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
   const [gstVatPercentage, setGstVatPercentage] = useState("");
   const [isExtractingReceipt, setIsExtractingReceipt] = useState(false);
   const [editingReceipt, setEditingReceipt] = useState(null);
-  const [isUpdatingReceipt, setIsUpdatingReceipt] = useState(false);
 
   // Initialize userRole once when component mounts
   useEffect(() => {
@@ -257,31 +256,159 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
 
     setIsSubmitting(true);
     try {
+      const token = localStorage.getItem("userToken");
+      const decoded = jwtDecode(token);
+      const userId = decoded.id;
+
       if (editingId) {
+        // Handle category
+        let categoryId = formData.category;
+        if (categorySearch) {
+          // First check if the category already exists
+          const existingCategory = categoryOptions.find(
+            c => c.name.toLowerCase() === categorySearch.toLowerCase()
+          );
+          
+          if (existingCategory) {
+            // Use the existing category ID
+            categoryId = existingCategory.id;
+          } else {
+            // Create new category only if it doesn't exist
+            try {
+              const newCategory = await createCategory(
+                categorySearch,
+                userRole === "accountant" ? selectedUserId : userId
+              );
+              categoryId = newCategory.id;
+              
+              // Update the categories list
+              setCategoryOptions(prev => [...prev, { id: newCategory.id, name: categorySearch }]);
+            } catch (err) {
+              console.error("Error creating new category:", err);
+              toast.error(err.message || "Failed to create new category");
+              return;
+            }
+          }
+        }
+
+        // Handle vendor
+        let vendorId = formData.vendor;
+        if (vendorSearch) {
+          // First check if vendor already exists
+          const existingVendor = vendorOptions.find(
+            v => v.name.toLowerCase() === vendorSearch.toLowerCase()
+          );
+
+          if (existingVendor) {
+            vendorId = existingVendor.id;
+          } else {
+            try {
+              const newVendor = await createVendor(
+                vendorSearch,
+                userRole === "accountant" ? selectedUserId : userId
+              );
+              vendorId = newVendor.id;
+              
+              // Update the vendors list
+              setVendorOptions(prev => [...prev, { id: newVendor.id, name: vendorSearch }]);
+            } catch (err) {
+              console.error("Error creating new vendor:", err);
+              toast.error(err.message || "Failed to create new vendor");
+              return;
+            }
+          }
+        }
+
+        // Handle account number
+        let accountId = formData.accountNo;
+        if (accountNumberSearch) {
+          // First check if account already exists
+          const existingAccount = accountOptions.find(
+            acc => acc.number.toLowerCase() === accountNumberSearch.toLowerCase()
+          );
+
+          if (existingAccount) {
+            accountId = existingAccount.id;
+          } else {
+            try {
+              const newAccount = await createAccount(
+                accountNumberSearch,
+                userRole === "accountant" ? selectedUserId : userId
+              );
+              accountId = newAccount.id;
+              
+              // Update the accounts list
+              setAccountOptions(prev => [...prev, { id: newAccount.id, number: accountNumberSearch }]);
+            } catch (err) {
+              console.error("Error creating new account:", err);
+              toast.error(err.message || "Failed to create new account");
+              return;
+            }
+          }
+        }
+
+        if (!vendorId) {
+          toast.error("Please select or create a valid vendor");
+          return;
+        }
+
+        if (!categoryId) {
+          toast.error("Please select or create a valid category");
+          return;
+        }
+
         // Update existing transaction
         const transactionData = {
-          newAmount: formData.amount || null,
-          newCategory: formData.category || null,
-          newType: formData.type || null,
+          transactionId: editingId,
+          newAmount: formData.amount,
+          newCategory: categoryId,
+          newType: formData.type,
+          accountNo: accountId,
+          vat_gst_amount: gstVatAmount || null,
+          vat_gst_percentage: gstVatPercentage || null,
+          desc1: formData.desc1 || "",
+          desc2: formData.desc2 || "",
+          desc3: formData.desc3,
+          vendorId: vendorId
         };
 
-        await toast.promise(
-          updateTransaction(editingId, transactionData, selectedUserId),
-          {
-            pending: "Updating transaction...",
-            success: "Transaction updated successfully 👌",
-            error: "Failed to update transaction 🤯",
-          }
-        );
+        // If there are new files, create a FormData object
+        if (files.length > 0) {
+          const formDataObj = new FormData();
+          // Append all transaction data
+          Object.entries(transactionData).forEach(([key, value]) => {
+            if (value !== null && value !== undefined) {
+              formDataObj.append(key, value);
+            }
+          });
+          // Append the file
+          files.forEach((file) => {
+            formDataObj.append("file", file);
+          });
+
+          await toast.promise(
+            updateTransaction(formDataObj, selectedUserId),
+            {
+              pending: "Updating transaction with new receipt...",
+              success: "Transaction updated successfully 👌",
+              error: "Failed to update transaction 🤯",
+            }
+          );
+        } else {
+          await toast.promise(
+            updateTransaction(transactionData, selectedUserId),
+            {
+              pending: "Updating transaction...",
+              success: "Transaction updated successfully 👌",
+              error: "Failed to update transaction 🤯",
+            }
+          );
+        }
         setShowModal(false);
         setEditingId(null);
         setRefreshTableList((prev) => !prev);
       } else {
         // Create new transaction
-        const token = localStorage.getItem("userToken");
-        const decoded = jwtDecode(token);
-        const userId = decoded.id;
-
         let categoryId = formData.category;
         let accountId = formData.accountNo;
         let vendorId = formData.vendor;
