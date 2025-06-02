@@ -84,7 +84,7 @@ export default function UserSignupPage() {
     setIsLoading(true);
 
     try {
-      const user = await fetch(
+      let user = await fetch(
         `${import.meta.env.VITE_BASE_URL}/auth/register`,
         {
           method: "POST",
@@ -104,15 +104,18 @@ export default function UserSignupPage() {
         toast.error("Error signing up !!");
         throw new Error("Error signing up");
       }
-      toast.success("Wohha signed up successfully!, PLs Login");
+      user = await user.json()
+      console.log("user is",user)
+      toast.success(user.message);
       navigate("/login");
-    } catch {
-      console.error("Error message:", e.message);
+    } catch(e) {
+      console.error("Error message:", e.error);
       setErrors({ form: "An error occurred. Please try again." });
       if (recaptchaRef.current) {
         recaptchaRef.current.reset();
       }
       setRecaptchaToken(null);
+      toast.error(e.error)
     } finally {
       setIsLoading(false);
     }
