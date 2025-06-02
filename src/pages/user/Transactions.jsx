@@ -223,6 +223,12 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
       ...formData,
       [name]: value,
     });
+
+   //trigger amount when gst changes 
+    if (name === 'amount' && showGstVat && gstVatPercentage) {
+      const calculatedAmount = calculateGstAmount(value, gstVatPercentage);
+      setGstVatAmount(calculatedAmount);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -493,7 +499,9 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
           desc3: formData.desc3,
           isDeleted: false,
           userId: userRole === "accountant" ? selectedUserId : userId,
-          accountNo: accountId
+          accountNo: accountId,
+          vat_gst_amount: gstVatAmount || null,
+          vat_gst_percentage: gstVatPercentage || null
         };
 
         if (files.length > 0) {
@@ -507,6 +515,8 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
           formDataObj.append("isDeleted", transactionData.isDeleted);
           formDataObj.append("userId", transactionData.userId);
           formDataObj.append("accountNo", transactionData.accountNo);
+          formDataObj.append("vat_gst_amount", transactionData.vat_gst_amount);
+          formDataObj.append("vat_gst_percentage", transactionData.vat_gst_percentage);
           files.forEach((file) => {
             formDataObj.append("file", file);
           });
@@ -798,7 +808,7 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
   // Function to handle percentage change with cookie update
   const handleGstPercentageChange = (newPercentage) => {
     setGstVatPercentage(newPercentage);
-    if (newPercentage) {
+    if (newPercentage && formData.amount) {
       saveGstPercentage(newPercentage);
       const calculatedAmount = calculateGstAmount(formData.amount, newPercentage);
       setGstVatAmount(calculatedAmount);
