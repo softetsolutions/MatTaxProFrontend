@@ -1704,19 +1704,17 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
                       </button>
                       <button
                         type="button"
+                        disabled={files.length === 0}
                         onClick={() => {
-                          const input = document.createElement('input');
-                          input.type = 'file';
-                          input.accept = 'image/*,.pdf';
-                          input.onchange = (e) => {
-                            const files = e.target.files;
-                            if (files.length > 0) {
-                              handleFileUpload({ target: { files } });
-                            }
-                          };
-                          input.click();
+                          if (files.length > 0) {
+                            handleFileUpload({ target: { files } });
+                          }
                         }}
-                        className="flex-1 px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-all duration-300 flex items-center justify-center gap-2 shadow-sm"
+                        className={`flex-1 px-4 py-2.5 text-white text-sm font-medium rounded-lg transition-all duration-300 flex items-center justify-center gap-2 shadow-sm ${
+                          files.length === 0
+                            ? 'bg-blue-200 cursor-not-allowed'
+                            : 'bg-blue-600 hover:bg-blue-700'
+                        }`}
                       >
                         Extract Receipt Data
                         <span className="text-xs bg-gradient-to-r from-yellow-100 to-yellow-50 text-yellow-800 px-3 py-1.5 rounded-full ml-1.5 font-semibold border border-yellow-200 shadow-sm flex items-center gap-2 group/badge hover:from-yellow-200 hover:to-yellow-100 transition-all duration-300">
