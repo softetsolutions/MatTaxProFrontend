@@ -124,12 +124,7 @@ export default function LoginPage() {
       user = await user.json();
       localStorage.setItem("userToken", user.data);
       toast.success("Wohha logged in successfully!");
-      const decoded = JSON.parse(atob(user.data.split('.')[1]));
-      if (decoded.role === "accountant") {
-        navigate("/dashboard/users");
-      } else {
-        navigate("/dashboard/transactions");
-      }
+      navigate("/dashboard");
     } catch (e) {
       console.error("Error message:", e.message);
       setError(e.message);
