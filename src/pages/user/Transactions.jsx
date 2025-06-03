@@ -112,6 +112,10 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
 
   // Fetch transaction data when selectedUserId changes
   useEffect(() => {
+    const token = localStorage.getItem("userToken");
+    const decoded = jwtDecode(token);
+    setUserRole(decoded.role);
+    setSelectedUserId(propSelectedUserId || null);
     const fetchTransactionData = async () => {
       try {
         setLoading(true);
