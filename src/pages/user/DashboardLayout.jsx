@@ -12,10 +12,13 @@ export default function DashboardLayout() {
 
 
   const decoded = jwtDecode(localStorage.getItem("userToken"));
-  const navigation = decoded.allowedRoutes.filter((item) =>
+  let navigation = decoded.allowedRoutes.filter((item) =>
     Object.keys(routeMapping).includes(item)
   );
 
+  if(decoded.role === "accountant"){
+    navigation = navigation.filter((route)=>route !== "transactions");
+  }
   useEffect(() => {
     const fetchInvitationToShowAsNotification = () => {
       fetchAndUpdatePendingInvitationsCount(setPendingInvitationsCount);

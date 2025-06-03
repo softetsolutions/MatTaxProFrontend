@@ -13,6 +13,8 @@ function RenderAllUserOrTransactions() {
 
     if (decoded.role === "admin") {
       return <Navigate to="allUsers" replace />;
+    }else if (decoded.role === "accountant"){
+      return <Navigate to="users" replace/>
     }
 
     return <Navigate to="transactions" replace />;
