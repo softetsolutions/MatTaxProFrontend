@@ -571,7 +571,12 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
       accountNo: "",
     });
     setFiles([]);
-    setRefreshTableList((prev) => !prev);
+    setVendorSearch("");
+    setAccountNumberSearch("");
+    setCategorySearch("");
+    setGstVatAmount("");
+    setGstVatPercentage("");
+    setShowGstVat(false);
   };
 
   // Enter key
