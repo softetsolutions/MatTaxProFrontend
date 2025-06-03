@@ -23,6 +23,7 @@ export default function InvitationPage() {
   const [confirmationAction, setConfirmationAction] = useState(null);
   const [confirmationInvitationId, setConfirmationInvitationId] =
     useState(null);
+  const [loadingInvitationId, setLoadingInvitationId] = useState(null);
 
   useEffect(() => {
     const loadInvitations = async () => {
@@ -56,19 +57,23 @@ export default function InvitationPage() {
   };
 
   const handleApprove = async (invitationId) => {
+    if (loadingInvitationId) return;
     setConfirmationAction("approve");
     setConfirmationInvitationId(invitationId);
     setShowConfirmationModal(true);
   };
 
   const handleReject = async (invitationId) => {
+    if (loadingInvitationId) return;
     setConfirmationAction("reject");
     setConfirmationInvitationId(invitationId);
     setShowConfirmationModal(true);
   };
 
   const handleConfirmAction = async () => {
+    if (loadingInvitationId) return;
     try {
+      setLoadingInvitationId(confirmationInvitationId);
       if (confirmationAction === "approve") {
         await handleApproveInvitation(confirmationInvitationId, invitations);
         setInvitations(
@@ -114,6 +119,7 @@ export default function InvitationPage() {
       setShowConfirmationModal(false);
       setConfirmationAction(null);
       setConfirmationInvitationId(null);
+      setLoadingInvitationId(null);
     }
   };
 
@@ -194,11 +200,13 @@ export default function InvitationPage() {
   };
 
   const handleViewDetails = (invitation) => {
+    if (loadingInvitationId) return;
     setSelectedInvitation(invitation);
     setShowModal(true);
   };
 
   const closeModal = () => {
+    if (loadingInvitationId) return;
     setShowModal(false);
     setSelectedInvitation(null);
   };
@@ -385,7 +393,10 @@ export default function InvitationPage() {
             <div className="flex justify-end gap-2 mt-6">
               <button
                 onClick={closeModal}
-                className="px-4 py-2 text-gray-600 border border-gray-300 rounded hover:bg-gray-50 hover:cursor-pointer"
+                disabled={loadingInvitationId === selectedInvitation?.id}
+                className={`px-4 py-2 text-gray-600 border border-gray-300 rounded hover:bg-gray-50 hover:cursor-pointer ${
+                  loadingInvitationId === selectedInvitation?.id ? "opacity-50 cursor-not-allowed" : ""
+                }`}
               >
                 Close
               </button>
@@ -397,18 +408,42 @@ export default function InvitationPage() {
                       handleReject(selectedInvitation.id);
                       closeModal();
                     }}
-                    className="px-4 py-2 text-white bg-red-600 rounded hover:bg-red-700 hover:cursor-pointer"
+                    disabled={loadingInvitationId === selectedInvitation.id}
+                    className={`px-4 py-2 text-white rounded hover:cursor-pointer ${
+                      loadingInvitationId === selectedInvitation.id
+                        ? "bg-red-400 cursor-not-allowed"
+                        : "bg-red-600 hover:bg-red-700"
+                    }`}
                   >
-                    Reject
+                    {loadingInvitationId === selectedInvitation.id ? (
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        <span>Rejecting...</span>
+                      </div>
+                    ) : (
+                      "Reject"
+                    )}
                   </button>
                   <button
                     onClick={() => {
                       handleApprove(selectedInvitation.id);
                       closeModal();
                     }}
-                    className="px-4 py-2 text-white bg-green-600 rounded hover:bg-green-700 hover:cursor-pointer"
+                    disabled={loadingInvitationId === selectedInvitation.id}
+                    className={`px-4 py-2 text-white rounded hover:cursor-pointer ${
+                      loadingInvitationId === selectedInvitation.id
+                        ? "bg-green-400 cursor-not-allowed"
+                        : "bg-green-600 hover:bg-green-700"
+                    }`}
                   >
-                    Approve
+                    {loadingInvitationId === selectedInvitation.id ? (
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        <span>Approving...</span>
+                      </div>
+                    ) : (
+                      "Approve"
+                    )}
                   </button>
                 </>
               )}
@@ -420,7 +455,13 @@ export default function InvitationPage() {
       {/* Confirmation Modal */}
       <ConfirmationModal
         isOpen={showConfirmationModal}
-        onClose={() => setShowConfirmationModal(false)}
+        onClose={() => {
+          if (loadingInvitationId !== confirmationInvitationId) {
+            setShowConfirmationModal(false);
+            setConfirmationAction(null);
+            setConfirmationInvitationId(null);
+          }
+        }}
         onConfirm={handleConfirmAction}
         action={confirmationAction}
         title={
@@ -438,19 +479,29 @@ export default function InvitationPage() {
             : "Are you sure you want to proceed?"
         }
         confirmText={
-          confirmationAction === "approve"
+          loadingInvitationId === confirmationInvitationId
+            ? confirmationAction === "approve"
+              ? "Approving..."
+              : "Rejecting..."
+            : confirmationAction === "approve"
             ? "Approve"
             : confirmationAction === "reject"
             ? "Reject"
             : "Confirm"
         }
         confirmButtonClass={
-          confirmationAction === "approve"
+          loadingInvitationId === confirmationInvitationId
+            ? confirmationAction === "approve"
+              ? "bg-green-400 hover:bg-green-400 focus:ring-green-300"
+              : "bg-red-400 hover:bg-red-400 focus:ring-red-300"
+            : confirmationAction === "approve"
             ? "bg-green-600 hover:bg-green-700 focus:ring-green-300"
             : confirmationAction === "reject"
             ? "bg-red-600 hover:bg-red-700 focus:ring-red-300"
             : undefined
         }
+        isLoading={loadingInvitationId === confirmationInvitationId}
+        closeButtonDisabled={loadingInvitationId === confirmationInvitationId}
       />
     </div>
   );

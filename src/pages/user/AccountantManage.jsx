@@ -31,6 +31,7 @@ export default function AccountantPage() {
   const [emailSearchLoading, setEmailSearchLoading] = useState(false);
   const [searchedAccountant,] = useState(null);
   const [emailSearchedAccountant, setEmailSearchedAccountant] = useState(null);
+  const [loadingAccountantId, setLoadingAccountantId] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -88,6 +89,7 @@ export default function AccountantPage() {
   };
 
   const handleAuthorize = (accountant) => {
+    if (loadingAccountantId) return; // Prevent multiple clicks
     const isCurrentlyAuthorized = accountant.status === "authorized";
     const isPending = accountant.status === "pending";
 
@@ -108,7 +110,9 @@ export default function AccountantPage() {
   };
 
   const handleConfirmAuthorize = async () => {
+    if (loadingAccountantId) return; // Prevent multiple clicks
     try {
+      setLoadingAccountantId(accountantToAuthorize.id);
       await requestAuthorization(accountantToAuthorize.id);
       setAccountants(
         accountants.map((accountant) =>
@@ -127,11 +131,15 @@ export default function AccountantPage() {
       toast.error(
         err.message || "Failed to update authorization. Please try again."
       );
+    } finally {
+      setLoadingAccountantId(null);
     }
   };
 
   const handleDeauthorize = async () => {
+    if (loadingAccountantId) return; // Prevent multiple clicks
     try {
+      setLoadingAccountantId(accountantToDeauthorize.id);
       await removeAuthorization(accountantToDeauthorize.id);
       setAccountants(
         accountants.map((accountant) =>
@@ -148,6 +156,8 @@ export default function AccountantPage() {
       toast.error(
         err.message || "Failed to remove authorization. Please try again."
       );
+    } finally {
+      setLoadingAccountantId(null);
     }
   };
 
@@ -183,6 +193,7 @@ export default function AccountantPage() {
 
   const handleUnifiedSearch = async (e) => {
     if (e) e.preventDefault();
+    if (loadingAccountantId) return;
     if (!searchTerm.trim()) {
       toast.warning("Please enter an email address");
       return;
@@ -202,7 +213,6 @@ export default function AccountantPage() {
           status: existing ? existing.status : "unauthorized",
         };
         setEmailSearchedAccountant(accountantData);
-        // Do NOT open the modal automatically
       } else {
         toast.info("No accountant found with this email");
         setEmailSearchedAccountant(null);
@@ -282,11 +292,13 @@ export default function AccountantPage() {
   };
 
   const handleAbout = (accountant) => {
+    if (loadingAccountantId) return; 
     setSelectedAccountant(accountant);
     setShowModal(true);
   };
 
   const closeModal = () => {
+    if (loadingAccountantId) return; 
     setShowModal(false);
     setSelectedAccountant(null);
   };
@@ -562,22 +574,41 @@ export default function AccountantPage() {
             <div className="flex justify-end gap-2 mt-6">
               <button
                 onClick={closeModal}
-                className="px-4 py-2 text-gray-600 border-2 bg-red-100 border-red-300 rounded hover:bg-red-200"
+                disabled={loadingAccountantId === selectedAccountant?.id}
+                className={`px-4 py-2 text-gray-600 border-2 bg-red-100 border-red-300 rounded hover:bg-red-200 ${
+                  loadingAccountantId === selectedAccountant?.id ? "opacity-50 cursor-not-allowed" : ""
+                }`}
               >
                 Close
               </button>
               {selectedAccountant.status !== "pending" && (
                 <button
                   onClick={searchedAccountant ? handleUnifiedSearch : () => handleAuthorize(selectedAccountant)}
+                  disabled={loadingAccountantId === selectedAccountant.id}
                   className={`px-4 py-2 text-white rounded ${
                     selectedAccountant.status === "authorized"
-                      ? "bg-red-600 hover:bg-red-700"
+                      ? loadingAccountantId === selectedAccountant.id
+                        ? "bg-red-400 cursor-not-allowed"
+                        : "bg-red-600 hover:bg-red-700"
+                      : loadingAccountantId === selectedAccountant.id
+                      ? "bg-green-400 cursor-not-allowed"
                       : "bg-green-600 hover:bg-green-700"
                   }`}
                 >
-                  {selectedAccountant.status === "authorized"
-                    ? "Revoke Access"
-                    : "Request Authorization"}
+                  {loadingAccountantId === selectedAccountant.id ? (
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      <span>
+                        {selectedAccountant.status === "authorized"
+                          ? "Revoking..."
+                          : "Requesting..."}
+                      </span>
+                    </div>
+                  ) : (
+                    selectedAccountant.status === "authorized"
+                      ? "Revoke Access"
+                      : "Request Authorization"
+                  )}
                 </button>
               )}
             </div>
@@ -589,19 +620,22 @@ export default function AccountantPage() {
         <ConfirmationModal
           isOpen={showConfirmationModal}
           onClose={() => {
-            setShowConfirmationModal(false);
-            setAccountantToDeauthorize(null);
+            if (loadingAccountantId !== accountantToDeauthorize.id) {
+              setShowConfirmationModal(false);
+              setAccountantToDeauthorize(null);
+            }
           }}
           onConfirm={handleDeauthorize}
-          action="deauthorize"
-          title="Confirm Deauthorization"
-          message={
-            <span>
-              Are you sure you want to deauthorize{" "}
-              <span className="font-bold">{accountantToDeauthorize.name}</span>?
-              This will revoke their access to your account.
-            </span>
+          title="Revoke Access"
+          message="Are you sure you want to revoke this accountant's access?"
+          confirmText={loadingAccountantId === accountantToDeauthorize.id ? "Revoking..." : "Revoke"}
+          confirmButtonClass={
+            loadingAccountantId === accountantToDeauthorize.id
+              ? "bg-red-400 hover:bg-red-400 focus:ring-red-300"
+              : "bg-red-600 hover:bg-red-700 focus:ring-red-300"
           }
+          isLoading={loadingAccountantId === accountantToDeauthorize.id}
+          closeButtonDisabled={loadingAccountantId === accountantToDeauthorize.id}
         />
       )}
 
@@ -609,19 +643,22 @@ export default function AccountantPage() {
         <ConfirmationModal
           isOpen={isAuthorizeModal}
           onClose={() => {
-            setIsAuthorizeModal(false);
-            setAccountantToAuthorize(null);
+            if (loadingAccountantId !== accountantToAuthorize.id) {
+              setIsAuthorizeModal(false);
+              setAccountantToAuthorize(null);
+            }
           }}
           onConfirm={handleConfirmAuthorize}
-          action="authorize"
-          title="Confirm Authorization"
-          message={
-            <span>
-              Are you sure you want to authorize{" "}
-              <span className="font-bold">{accountantToAuthorize.name}</span>?
-              This will allow them to access your account.
-            </span>
+          title="Request Authorization"
+          message="Are you sure you want to request authorization for this accountant?"
+          confirmText={loadingAccountantId === accountantToAuthorize.id ? "Requesting..." : "Request"}
+          confirmButtonClass={
+            loadingAccountantId === accountantToAuthorize.id
+              ? "bg-green-400 hover:bg-green-400 focus:ring-green-300"
+              : "bg-green-600 hover:bg-green-700 focus:ring-green-300"
           }
+          isLoading={loadingAccountantId === accountantToAuthorize.id}
+          closeButtonDisabled={loadingAccountantId === accountantToAuthorize.id}
         />
       )}
     </div>
