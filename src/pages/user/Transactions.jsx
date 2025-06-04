@@ -581,6 +581,7 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
     setGstVatAmount("");
     setGstVatPercentage("");
     setShowGstVat(false);
+    setRefreshTableList((prev) => !prev);
   };
 
   // Enter key

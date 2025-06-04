@@ -118,6 +118,13 @@ export default function UserSignupPage() {
       toast.error(e.error)
     } finally {
       setIsLoading(false);
+      setFormData({
+        firstName: "",
+        lastName: "",
+        email: "",
+        password: "",
+        confirmPassword: "",
+      });
     }
   };
 
@@ -140,7 +147,7 @@ export default function UserSignupPage() {
               </Link>
 
               <div className="text-center mb-8">
-                <h1 className="text-2xl font-bold mb-2">Create User Account</h1>
+                <h1 className="text-2xl font-bold mb-2">Create {role} Account</h1>
                 <p className="text-gray-400">
                   Fill in your details to get started
                 </p>
