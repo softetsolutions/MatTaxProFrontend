@@ -20,19 +20,41 @@ import {
   updateTransaction,
   deleteTransaction,
 } from "../../utils/transactionsApi";
-import { fetchAllVendors, updateVendor, createVendor } from "../../utils/vendorApi";
-import { fetchAllCategories, updateCategory, createCategory } from "../../utils/categoryApi";
-import { fetchAllAccounts, updateAccount, createAccount } from "../../utils/accountApi";
+import {
+  fetchAllVendors,
+  updateVendor,
+  createVendor,
+} from "../../utils/vendorApi";
+import {
+  fetchAllCategories,
+  updateCategory,
+  createCategory,
+} from "../../utils/categoryApi";
+import {
+  fetchAllAccounts,
+  updateAccount,
+  createAccount,
+} from "../../utils/accountApi";
 import { downloadCSV } from "../../utils/convertAndDownloadCsv";
 import UploadCsv from "./UploadCsv";
-import { fetchReceipt, handleFileUpload as handleReceiptUpload } from "../../utils/receiptApi";
+import {
+  fetchReceipt,
+  handleFileUpload as handleReceiptUpload,
+} from "../../utils/receiptApi";
 import DateRangeFilter from "../../components/DateRangeFilter";
 import { filterTransactionsByDate } from "../../utils/dateFilter";
 import TransactionTypeFilter from "../../components/TransactionTypeFilter";
-import { getDefaultGstPercentage, saveGstPercentage, calculateGstAmount } from "../../utils/gstVatUtils";
+import {
+  getDefaultGstPercentage,
+  saveGstPercentage,
+  calculateGstAmount,
+} from "../../utils/gstVatUtils";
 import Pagination from "../../components/Pagination";
 
-export default function TransactionsPage({ setIsTransasctionLog, selectedUserId: propSelectedUserId }) {
+export default function TransactionsPage({
+  setIsTransasctionLog,
+  selectedUserId: propSelectedUserId,
+}) {
   const [sortField, setSortField] = useState("date");
   const [sortDirection, setSortDirection] = useState("asc");
   const [showModal, setShowModal] = useState(false);
@@ -55,14 +77,16 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
   const [showVendorDropdown, setShowVendorDropdown] = useState(false);
   const [userRole, setUserRole] = useState(null);
-  const [selectedUserId, setSelectedUserId] = useState(propSelectedUserId || null);
+  const [selectedUserId, setSelectedUserId] = useState(
+    propSelectedUserId || null
+  );
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [userSearch, setUserSearch] = useState("");
   const [users, setUsers] = useState([]);
   const [vendorOptions, setVendorOptions] = useState([]);
   const [categoryOptions, setCategoryOptions] = useState([]);
   const [currentPage, setCurrentPage] = useState(() => {
-    const savedPage = localStorage.getItem('transactionsCurrentPage');
+    const savedPage = localStorage.getItem("transactionsCurrentPage");
     return savedPage ? parseInt(savedPage, 10) : 1;
   });
   const [totalPages, setTotalPages] = useState(1);
@@ -81,7 +105,8 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
   const [endDate, setEndDate] = useState("");
   const [transactionTypeFilter, setTransactionTypeFilter] = useState("all");
   const [accountNumberSearch, setAccountNumberSearch] = useState("");
-  const [showAccountNumberDropdown, setShowAccountNumberDropdown] = useState(false);
+  const [showAccountNumberDropdown, setShowAccountNumberDropdown] =
+    useState(false);
   const accountNumberRef = useRef(null);
   const [accountOptions, setAccountOptions] = useState([]);
   const [editingAccountId, setEditingAccountId] = useState(null);
@@ -99,12 +124,6 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
   const [isExtractingReceipt, setIsExtractingReceipt] = useState(false);
   const [editingReceipt, setEditingReceipt] = useState(null);
 
-  // Initialize userRole once when component mounts
-  useEffect(() => {
-    const token = localStorage.getItem("userToken");
-    const decoded = jwtDecode(token);
-    setUserRole(decoded.role);
-  }, []);
 
   useEffect(() => {
     setSelectedUserId(propSelectedUserId || null);
@@ -112,10 +131,6 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
 
   // Fetch transaction data when selectedUserId changes
   useEffect(() => {
-    const token = localStorage.getItem("userToken");
-    const decoded = jwtDecode(token);
-    setUserRole(decoded.role);
-    setSelectedUserId(propSelectedUserId || null);
     const fetchTransactionData = async () => {
       try {
         setLoading(true);
@@ -123,7 +138,7 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
         const token = localStorage.getItem("userToken");
         const decoded = jwtDecode(token);
         const userId = decoded.id;
-
+        setUserRole(decoded.role);
         // For accountants -> fetch vendors if user selected
         if (userRole === "accountant" && !selectedUserId) {
           setTransactions([]);
@@ -136,9 +151,15 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
 
         const data = await Promise.allSettled([
           fetchTransactions(selectedUserId, navigate, currentPage, pageSize),
-          fetchAllVendors(userRole === "accountant" ? selectedUserId : userId),
-          fetchAllCategories(userRole === "accountant" ? selectedUserId : userId),
-          fetchAllAccounts(userRole === "accountant" ? selectedUserId : userId),
+          fetchAllVendors(
+            decoded.role === "accountant" ? selectedUserId : userId
+          ),
+          fetchAllCategories(
+            decoded.role === "accountant" ? selectedUserId : userId
+          ),
+          fetchAllAccounts(
+            decoded.role === "accountant" ? selectedUserId : userId
+          ),
         ]);
 
         const vendors = data[1].value.reduce((acc, vendor) => {
@@ -171,7 +192,7 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
         setVendorOptions(vendors);
         setCategoryOptions(categories);
         setAccountOptions(accounts);
-        
+
         // Handle paginated transactions response
         const transactionsResponse = data[0].value;
         setTransactions(transactionsResponse.transactions || []);
@@ -201,7 +222,10 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
       if (vendorRef.current && !vendorRef.current.contains(event.target)) {
         setShowVendorDropdown(false);
       }
-      if (accountNumberRef.current && !accountNumberRef.current.contains(event.target)) {
+      if (
+        accountNumberRef.current &&
+        !accountNumberRef.current.contains(event.target)
+      ) {
         setShowAccountNumberDropdown(false);
       }
     }
@@ -228,8 +252,8 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
       [name]: value,
     });
 
-   //trigger amount when gst changes 
-    if (name === 'amount' && showGstVat && gstVatPercentage) {
+    //trigger amount when gst changes
+    if (name === "amount" && showGstVat && gstVatPercentage) {
       const calculatedAmount = calculateGstAmount(value, gstVatPercentage);
       setGstVatAmount(calculatedAmount);
     }
@@ -237,22 +261,22 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
 
   const handleSubmit = async (e) => {
     if (e) e.preventDefault();
-    
+
     // Check required fields
     const requiredFields = {
       amount: "Amount",
       category: "Category",
       type: "Transaction Type",
       vendor: "Vendor",
-      desc3: "Transaction Details"
+      desc3: "Transaction Details",
     };
 
     const missingFields = Object.entries(requiredFields)
       .filter(([key]) => {
-        if (key === 'category') {
+        if (key === "category") {
           return !formData[key] && !categorySearch;
         }
-        if (key === 'vendor') {
+        if (key === "vendor") {
           return !formData[key] && !vendorSearch;
         }
         return !formData[key];
@@ -260,7 +284,11 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
       .map(([, label]) => label);
 
     if (missingFields.length > 0) {
-      toast.warning(`Please fill in the following required fields: ${missingFields.join(", ")}`);
+      toast.warning(
+        `Please fill in the following required fields: ${missingFields.join(
+          ", "
+        )}`
+      );
       return;
     }
 
@@ -276,9 +304,9 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
         if (categorySearch) {
           // First check if the category already exists
           const existingCategory = categoryOptions.find(
-            c => c.name.toLowerCase() === categorySearch.toLowerCase()
+            (c) => c.name.toLowerCase() === categorySearch.toLowerCase()
           );
-          
+
           if (existingCategory) {
             // Use the existing category ID
             categoryId = existingCategory.id;
@@ -290,9 +318,12 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
                 userRole === "accountant" ? selectedUserId : userId
               );
               categoryId = newCategory.id;
-              
+
               // Update the categories list
-              setCategoryOptions(prev => [...prev, { id: newCategory.id, name: categorySearch }]);
+              setCategoryOptions((prev) => [
+                ...prev,
+                { id: newCategory.id, name: categorySearch },
+              ]);
             } catch (err) {
               console.error("Error creating new category:", err);
               toast.error(err.message || "Failed to create new category");
@@ -306,7 +337,7 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
         if (vendorSearch) {
           // First check if vendor already exists
           const existingVendor = vendorOptions.find(
-            v => v.name.toLowerCase() === vendorSearch.toLowerCase()
+            (v) => v.name.toLowerCase() === vendorSearch.toLowerCase()
           );
 
           if (existingVendor) {
@@ -318,9 +349,12 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
                 userRole === "accountant" ? selectedUserId : userId
               );
               vendorId = newVendor.id;
-              
+
               // Update the vendors list
-              setVendorOptions(prev => [...prev, { id: newVendor.id, name: vendorSearch }]);
+              setVendorOptions((prev) => [
+                ...prev,
+                { id: newVendor.id, name: vendorSearch },
+              ]);
             } catch (err) {
               console.error("Error creating new vendor:", err);
               toast.error(err.message || "Failed to create new vendor");
@@ -334,7 +368,8 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
         if (accountNumberSearch) {
           // First check if account already exists
           const existingAccount = accountOptions.find(
-            acc => acc.number.toLowerCase() === accountNumberSearch.toLowerCase()
+            (acc) =>
+              acc.number.toLowerCase() === accountNumberSearch.toLowerCase()
           );
 
           if (existingAccount) {
@@ -346,9 +381,12 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
                 userRole === "accountant" ? selectedUserId : userId
               );
               accountId = newAccount.id;
-              
+
               // Update the accounts list
-              setAccountOptions(prev => [...prev, { id: newAccount.id, number: accountNumberSearch }]);
+              setAccountOptions((prev) => [
+                ...prev,
+                { id: newAccount.id, number: accountNumberSearch },
+              ]);
             } catch (err) {
               console.error("Error creating new account:", err);
               toast.error(err.message || "Failed to create new account");
@@ -379,7 +417,7 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
           desc1: formData.desc1 || "",
           desc2: formData.desc2 || "",
           desc3: formData.desc3,
-          vendorId: vendorId
+          vendorId: vendorId,
         };
 
         // If there are new files, create a FormData object
@@ -396,14 +434,11 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
             formDataObj.append("file", file);
           });
 
-          await toast.promise(
-            updateTransaction(formDataObj, selectedUserId),
-            {
-              pending: "Updating transaction with new receipt...",
-              success: "Transaction updated successfully 👌",
-              error: "Failed to update transaction 🤯",
-            }
-          );
+          await toast.promise(updateTransaction(formDataObj, selectedUserId), {
+            pending: "Updating transaction with new receipt...",
+            success: "Transaction updated successfully 👌",
+            error: "Failed to update transaction 🤯",
+          });
         } else {
           await toast.promise(
             updateTransaction(transactionData, selectedUserId),
@@ -422,14 +457,14 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
         let categoryId = formData.category;
         let accountId = formData.accountNo;
         let vendorId = formData.vendor;
-        
+
         // If there's a category search term but no category ID
         if (categorySearch && !categoryId) {
           // First check if the category already exists
           const existingCategory = categoryOptions.find(
-            c => c.name.toLowerCase() === categorySearch.toLowerCase()
+            (c) => c.name.toLowerCase() === categorySearch.toLowerCase()
           );
-          
+
           if (existingCategory) {
             // Use the existing category ID
             categoryId = existingCategory.id;
@@ -441,9 +476,12 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
                 userRole === "accountant" ? selectedUserId : userId
               );
               categoryId = newCategory.id;
-              
+
               // Update the categories list
-              setCategoryOptions(prev => [...prev, { id: newCategory.id, name: categorySearch }]);
+              setCategoryOptions((prev) => [
+                ...prev,
+                { id: newCategory.id, name: categorySearch },
+              ]);
             } catch (err) {
               console.error("Error creating new category:", err);
               toast.error("Failed to create new category");
@@ -460,9 +498,12 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
               userRole === "accountant" ? selectedUserId : userId
             );
             vendorId = newVendor.id;
-            
+
             // Update the vendors list
-            setVendorOptions(prev => [...prev, { id: newVendor.id, name: vendorSearch }]);
+            setVendorOptions((prev) => [
+              ...prev,
+              { id: newVendor.id, name: vendorSearch },
+            ]);
           } catch (err) {
             console.error("Error creating new vendor:", err);
             toast.error("Failed to create new vendor");
@@ -476,9 +517,12 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
               userRole === "accountant" ? selectedUserId : userId
             );
             accountId = newAccount.id;
-            
+
             // Update the accounts list
-            setAccountOptions(prev => [...prev, { id: newAccount.id, number: newAccount.name }]);
+            setAccountOptions((prev) => [
+              ...prev,
+              { id: newAccount.id, number: newAccount.name },
+            ]);
           } catch (err) {
             console.error("Error creating new account:", err);
             toast.error("Failed to create new account");
@@ -505,7 +549,7 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
           userId: userRole === "accountant" ? selectedUserId : userId,
           accountNo: accountId,
           vat_gst_amount: gstVatAmount || null,
-          vat_gst_percentage: gstVatPercentage || null
+          vat_gst_percentage: gstVatPercentage || null,
         };
 
         if (files.length > 0) {
@@ -520,7 +564,10 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
           formDataObj.append("userId", transactionData.userId);
           formDataObj.append("accountNo", transactionData.accountNo);
           formDataObj.append("vat_gst_amount", transactionData.vat_gst_amount);
-          formDataObj.append("vat_gst_percentage", transactionData.vat_gst_percentage);
+          formDataObj.append(
+            "vat_gst_percentage",
+            transactionData.vat_gst_percentage
+          );
           files.forEach((file) => {
             formDataObj.append("file", file);
           });
@@ -553,6 +600,7 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
         setVendorSearch("");
         setAccountNumberSearch("");
         setCategorySearch("");
+        setGstVatAmount("0");
       }
     } catch (err) {
       console.error("Operation failed:", err);
@@ -605,10 +653,16 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
   const handleEdit = async (id) => {
     const transactionToEdit = transactions.find((txn) => txn.id === id);
     if (transactionToEdit) {
-      const category = categoryOptions.find(c => String(c.id) === String(transactionToEdit.category));
-      const vendor = vendorOptions.find(v => String(v.id) === String(transactionToEdit.vendorid));
-      const account = accountOptions.find(a => String(a.id) === String(transactionToEdit.accountno));
-      
+      const category = categoryOptions.find(
+        (c) => String(c.id) === String(transactionToEdit.category)
+      );
+      const vendor = vendorOptions.find(
+        (v) => String(v.id) === String(transactionToEdit.vendorid)
+      );
+      const account = accountOptions.find(
+        (a) => String(a.id) === String(transactionToEdit.accountno)
+      );
+
       setFormData({
         amount: transactionToEdit.amount.replace("$", ""),
         category: transactionToEdit.category,
@@ -629,8 +683,15 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
       // Try to fetch receipt if it exists
       if (transactionToEdit.receipt) {
         try {
-          const base64Image = await fetchReceipt(transactionToEdit.receipt, navigate);
-          if (base64Image && typeof base64Image === 'string' && base64Image.trim() !== '') {
+          const base64Image = await fetchReceipt(
+            transactionToEdit.receipt,
+            navigate
+          );
+          if (
+            base64Image &&
+            typeof base64Image === "string" &&
+            base64Image.trim() !== ""
+          ) {
             setEditingReceipt(`data:image/jpeg;base64,${base64Image}`);
           } else {
             setEditingReceipt(null);
@@ -679,7 +740,9 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
 
   const filteredTransactions = filterTransactionsByDate(
     sortedTransactions.filter((txn) =>
-      transactionTypeFilter === "all" ? true : txn.type === transactionTypeFilter
+      transactionTypeFilter === "all"
+        ? true
+        : txn.type === transactionTypeFilter
     ),
     startDate,
     endDate
@@ -741,31 +804,37 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
     try {
       setIsLoadingReceipt(true);
       const base64Image = await fetchReceipt(receiptId, navigate);
-      
+
       // Validate the base64 image data
-      if (!base64Image || typeof base64Image !== 'string' || base64Image.trim() === '') {
+      if (
+        !base64Image ||
+        typeof base64Image !== "string" ||
+        base64Image.trim() === ""
+      ) {
         toast.warning("No receipt image found");
         setIsLoadingReceipt(false);
         return;
       }
-      
+
       // Only open modal if we have valid image data
       setShowReceiptModal(true);
-      
+
       // Create an image object to pre-load the image
       const img = new Image();
       img.onload = () => {
         setCurrentReceipt(`data:image/jpeg;base64,${base64Image}`);
         setIsLoadingReceipt(false);
       };
-      
+
       img.onerror = () => {
         console.error("Error loading image preview");
         setIsLoadingReceipt(false);
         setShowReceiptModal(false);
-        toast.error("Failed to load receipt image. The format may be unsupported.");
+        toast.error(
+          "Failed to load receipt image. The format may be unsupported."
+        );
       };
-      
+
       img.src = `data:image/jpeg;base64,${base64Image}`;
     } catch (error) {
       setIsLoadingReceipt(false);
@@ -820,7 +889,10 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
     setGstVatPercentage(newPercentage);
     if (newPercentage && formData.amount) {
       saveGstPercentage(newPercentage);
-      const calculatedAmount = calculateGstAmount(formData.amount, newPercentage);
+      const calculatedAmount = calculateGstAmount(
+        formData.amount,
+        newPercentage
+      );
       setGstVatAmount(calculatedAmount);
     } else {
       setGstVatAmount("");
@@ -832,13 +904,13 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
     if (uploadedFiles.length === 0) return;
 
     setFiles(uploadedFiles);
-    
+
     // preview for the uploaded image
-    if (uploadedFiles[0].type.startsWith('image/')) {
+    if (uploadedFiles[0].type.startsWith("image/")) {
       const previewUrl = URL.createObjectURL(uploadedFiles[0]);
       setEditingReceipt(previewUrl);
     }
-    
+
     try {
       setIsExtractingReceipt(true);
       const result = await handleReceiptUpload(
@@ -853,15 +925,15 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
       if (!result.matchingCategory && result.extractedData.category) {
         setCategorySearch(result.extractedData.category);
       }
-      // Update form data 
+      // Update form data
       const newFormData = {
         ...formData,
-        amount: result.extractedData.amount || '',
-        desc3: result.extractedData.description || '',
+        amount: result.extractedData.amount || "",
+        desc3: result.extractedData.description || "",
         type: result.extractedData.type,
-        vendor: result.matchingVendor?.id || '',
-        category: result.matchingCategory?.id || '',
-        accountNo: result.extractedData.accountNumber || ''
+        vendor: result.matchingVendor?.id || "",
+        category: result.matchingCategory?.id || "",
+        accountNo: result.extractedData.accountNumber || "",
       };
       setFormData(newFormData);
 
@@ -873,10 +945,10 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
         setCategorySearch(result.extractedData.category);
       }
 
-      toast.success('Receipt data extracted');
+      toast.success("Receipt data extracted");
     } catch (error) {
-      console.error('Error in handleFileUpload:', error);
-      toast.error(error.message || 'Failed to extract receipt data');
+      console.error("Error in handleFileUpload:", error);
+      toast.error(error.message || "Failed to extract receipt data");
     } finally {
       setIsExtractingReceipt(false);
     }
@@ -884,19 +956,19 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
 
   // Update localStorage when currentPage changes
   useEffect(() => {
-    localStorage.setItem('transactionsCurrentPage', currentPage.toString());
+    localStorage.setItem("transactionsCurrentPage", currentPage.toString());
   }, [currentPage]);
 
   // Reset page to 1 when user changes
   useEffect(() => {
     setCurrentPage(1);
-    localStorage.setItem('transactionsCurrentPage', '1');
+    localStorage.setItem("transactionsCurrentPage", "1");
   }, [selectedUserId]);
 
   // remove image preview
   useEffect(() => {
     return () => {
-      if (editingReceipt && editingReceipt.startsWith('blob:')) {
+      if (editingReceipt && editingReceipt.startsWith("blob:")) {
         URL.revokeObjectURL(editingReceipt);
       }
     };
@@ -915,12 +987,27 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
       <div className="flex items-center justify-center min-h-[60vh] bg-white">
         <div className="bg-red-50 border border-red-200 rounded-lg p-8 flex flex-col items-center shadow-md">
           <div className="mb-4">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9 9 4.03 9 9z" />
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-10 w-10 text-red-400"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 8v4m0 4h.01M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9 9 4.03 9 9z"
+              />
             </svg>
           </div>
-          <div className="text-lg font-semibold text-red-600 mb-2">Failed to load Transactions</div>
-          <div className="text-sm text-red-500 mb-6">Please check your connection or try again later.</div>
+          <div className="text-lg font-semibold text-red-600 mb-2">
+            Failed to load Transactions
+          </div>
+          <div className="text-sm text-red-500 mb-6">
+            Please check your connection or try again later.
+          </div>
           <button
             onClick={() => window.location.reload()}
             className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors shadow"
@@ -1141,7 +1228,9 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
                           {txn.amount}
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-900">
-                          {categoryOptions.find((c) => String(c.id) === String(txn.category))?.name || txn.category}
+                          {categoryOptions.find(
+                            (c) => String(c.id) === String(txn.category)
+                          )?.name || txn.category}
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-900 capitalize">
                           {txn.type}
@@ -1254,10 +1343,11 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
                       <input
                         type="text"
                         value={
-                          accountOptions.find(acc => acc.number === formData.accountNo)?.number ||
-                          accountNumberSearch
+                          accountOptions.find(
+                            (acc) => acc.number === formData.accountNo
+                          )?.number || accountNumberSearch
                         }
-                        onChange={e => {
+                        onChange={(e) => {
                           setAccountNumberSearch(e.target.value);
                           setShowAccountNumberDropdown(true);
                         }}
@@ -1274,13 +1364,18 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
                             <input
                               type="text"
                               value={accountNumberSearch}
-                              onChange={e => setAccountNumberSearch(e.target.value)}
+                              onChange={(e) =>
+                                setAccountNumberSearch(e.target.value)
+                              }
                               className="w-full p-2 bg-transparent focus:outline-none text-sm text-black"
                               placeholder="Search account numbers..."
                               autoFocus
                             />
                             {accountNumberSearch && (
-                              <button onClick={() => setAccountNumberSearch("")} className="p-2">
+                              <button
+                                onClick={() => setAccountNumberSearch("")}
+                                className="p-2"
+                              >
                                 <X className="w-4 h-4 text-gray-400" />
                               </button>
                             )}
@@ -1293,7 +1388,10 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
                                 key={acc.id}
                                 className="px-4 py-2 hover:bg-blue-50 cursor-pointer text-black"
                                 onClick={() => {
-                                  setFormData(prev => ({ ...prev, accountNo: acc.id }));
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    accountNo: acc.id,
+                                  }));
                                   setAccountNumberSearch(acc.number);
                                   setShowAccountNumberDropdown(false);
                                 }}
@@ -1347,7 +1445,10 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
                                   <div className="flex items-center gap-2 w-full">
                                     <span
                                       onClick={() => {
-                                        setFormData(prev => ({ ...prev, accountNo: acc.id }));
+                                        setFormData((prev) => ({
+                                          ...prev,
+                                          accountNo: acc.id,
+                                        }));
                                         setAccountNumberSearch(acc.number);
                                         setShowAccountNumberDropdown(false);
                                       }}
@@ -1407,7 +1508,7 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
                     <input
                       type="checkbox"
                       checked={showGstVat}
-                      onChange={e => {
+                      onChange={(e) => {
                         setShowGstVat(e.target.checked);
                         if (!e.target.checked) {
                           setGstVatAmount("");
@@ -1415,7 +1516,10 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
                         } else {
                           const defaultPercentage = getDefaultGstPercentage();
                           setGstVatPercentage(defaultPercentage);
-                          const calculatedAmount = calculateGstAmount(formData.amount, defaultPercentage);
+                          const calculatedAmount = calculateGstAmount(
+                            formData.amount,
+                            defaultPercentage
+                          );
                           setGstVatAmount(calculatedAmount);
                         }
                       }}
@@ -1425,18 +1529,22 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
                   </label>
                   <div className="flex gap-4">
                     <div className="flex-1">
-                      <label className="block text-xs text-gray-500 mb-1">GST/VAT Amount</label>
+                      <label className="block text-xs text-gray-500 mb-1">
+                        GST/VAT Amount
+                      </label>
                       <input
                         type="number"
                         value={gstVatAmount}
                         disabled={!showGstVat || gstVatPercentage !== ""}
-                        onChange={e => {
+                        onChange={(e) => {
                           const newAmount = e.target.value;
                           setGstVatAmount(newAmount);
                           setGstVatPercentage("");
                         }}
                         className={`w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-black ${
-                          !showGstVat || gstVatPercentage !== "" ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'
+                          !showGstVat || gstVatPercentage !== ""
+                            ? "bg-gray-100 cursor-not-allowed"
+                            : "bg-white"
                         }`}
                         placeholder="Enter amount"
                         min="0"
@@ -1444,14 +1552,20 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
                       />
                     </div>
                     <div className="flex-1">
-                      <label className="block text-xs text-gray-500 mb-1">GST/VAT %</label>
+                      <label className="block text-xs text-gray-500 mb-1">
+                        GST/VAT %
+                      </label>
                       <input
                         type="number"
                         value={gstVatPercentage}
                         disabled={!showGstVat}
-                        onChange={e => handleGstPercentageChange(e.target.value)}
+                        onChange={(e) =>
+                          handleGstPercentageChange(e.target.value)
+                        }
                         className={`w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-black ${
-                          !showGstVat ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'
+                          !showGstVat
+                            ? "bg-gray-100 cursor-not-allowed"
+                            : "bg-white"
                         }`}
                         placeholder="Enter percentage"
                         min="0"
@@ -1473,14 +1587,18 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
                     >
                       <input
                         type="text"
-                        value={categoryOptions.find(c => c.id === formData.category)?.name || categorySearch}
+                        value={
+                          categoryOptions.find(
+                            (c) => c.id === formData.category
+                          )?.name || categorySearch
+                        }
                         onChange={(e) => {
                           setCategorySearch(e.target.value);
                           setShowCategoryDropdown(true);
                           // Clear the category ID when typing a new name
-                          setFormData(prev => ({
+                          setFormData((prev) => ({
                             ...prev,
-                            category: ""
+                            category: "",
                           }));
                         }}
                         className="w-full bg-transparent focus:outline-none text-sm text-black"
@@ -1496,13 +1614,18 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
                             <input
                               type="text"
                               value={categorySearch}
-                              onChange={(e) => setCategorySearch(e.target.value)}
+                              onChange={(e) =>
+                                setCategorySearch(e.target.value)
+                              }
                               className="w-full p-2 bg-transparent focus:outline-none text-sm text-black"
                               placeholder="Search categories..."
                               autoFocus
                             />
                             {categorySearch && (
-                              <button onClick={() => setCategorySearch("")} className="p-2">
+                              <button
+                                onClick={() => setCategorySearch("")}
+                                className="p-2"
+                              >
                                 <X className="w-4 h-4 text-gray-400" />
                               </button>
                             )}
@@ -1815,14 +1938,14 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
                     <button
                       type="button"
                       onClick={() => {
-                        const input = document.createElement('input');
-                        input.type = 'file';
-                        input.accept = 'image/*,.pdf';
+                        const input = document.createElement("input");
+                        input.type = "file";
+                        input.accept = "image/*,.pdf";
                         input.onchange = (e) => {
                           const files = e.target.files;
                           if (files.length > 0) {
                             setFiles(Array.from(files));
-                            if (files[0].type.startsWith('image/')) {
+                            if (files[0].type.startsWith("image/")) {
                               const previewUrl = URL.createObjectURL(files[0]);
                               setEditingReceipt(previewUrl);
                             }
@@ -1857,21 +1980,28 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
                         } else if (editingReceipt) {
                           // Create a File object from the base64 image
                           fetch(editingReceipt)
-                            .then(res => res.blob())
-                            .then(blob => {
-                              const file = new File([blob], "receipt.jpg", { type: "image/jpeg" });
+                            .then((res) => res.blob())
+                            .then((blob) => {
+                              const file = new File([blob], "receipt.jpg", {
+                                type: "image/jpeg",
+                              });
                               handleFileUpload({ target: { files: [file] } });
                             })
-                            .catch(err => {
-                              console.error("Error converting receipt to file:", err);
-                              toast.error("Failed to process receipt for extraction");
+                            .catch((err) => {
+                              console.error(
+                                "Error converting receipt to file:",
+                                err
+                              );
+                              toast.error(
+                                "Failed to process receipt for extraction"
+                              );
                             });
                         }
                       }}
                       className={`flex-1 px-4 py-2.5 text-white text-sm font-medium rounded-lg transition-all duration-300 flex items-center justify-center gap-2 shadow-sm ${
                         files.length === 0 && !editingReceipt
-                          ? 'bg-blue-200 cursor-not-allowed'
-                          : 'bg-blue-600 hover:bg-blue-700'
+                          ? "bg-blue-200 cursor-not-allowed"
+                          : "bg-blue-600 hover:bg-blue-700"
                       }`}
                     >
                       Extract Receipt Data
@@ -1899,20 +2029,27 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
                     {isExtractingReceipt && (
                       <div className="absolute inset-0 bg-white/90 flex items-center justify-center flex-col gap-3 z-10 rounded-lg">
                         <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500"></div>
-                        <p className="text-sm text-gray-600">Extracting data from receipt...</p>
+                        <p className="text-sm text-gray-600">
+                          Extracting data from receipt...
+                        </p>
                       </div>
                     )}
-                    {(files.length > 0 || editingReceipt) ? (
+                    {files.length > 0 || editingReceipt ? (
                       <>
                         <div className="w-full flex items-center justify-between mb-2">
                           <span className="text-gray-700 text-sm truncate">
-                            {files.length > 0 ? files[0].name : "Current Receipt"}
+                            {files.length > 0
+                              ? files[0].name
+                              : "Current Receipt"}
                           </span>
                           <button
                             type="button"
                             onClick={() => {
                               setFiles([]);
-                              if (editingReceipt && editingReceipt.startsWith('blob:')) {
+                              if (
+                                editingReceipt &&
+                                editingReceipt.startsWith("blob:")
+                              ) {
                                 URL.revokeObjectURL(editingReceipt);
                               }
                               setEditingReceipt(null);
@@ -1924,14 +2061,20 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
                         </div>
                         <div className="flex-1 w-full flex items-center justify-center">
                           <img
-                            src={files.length > 0 ? URL.createObjectURL(files[0]) : editingReceipt}
+                            src={
+                              files.length > 0
+                                ? URL.createObjectURL(files[0])
+                                : editingReceipt
+                            }
                             alt="Receipt Preview"
                             className="max-h-56 max-w-full object-contain"
                           />
                         </div>
                       </>
                     ) : (
-                      <div className="text-gray-400 text-center py-12 w-full">No receipt selected</div>
+                      <div className="text-gray-400 text-center py-12 w-full">
+                        No receipt selected
+                      </div>
                     )}
                   </div>
                   <p className="text-xs text-gray-500 mt-3 text-center">
@@ -2009,7 +2152,7 @@ export default function TransactionsPage({ setIsTransasctionLog, selectedUserId:
                     alt="Receipt"
                     className="max-w-full h-auto min-h-[50vh] object-contain border border-gray-200 shadow-sm"
                     onError={(e) => {
-                      console.error("Image failed to load",e);
+                      console.error("Image failed to load", e);
                     }}
                   />
                 </div>
